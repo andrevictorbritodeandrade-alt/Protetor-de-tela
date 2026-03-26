@@ -724,7 +724,10 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         const url = URL.createObjectURL(audioBlob);
         if (audioRef.current) {
           audioRef.current.src = url;
-          audioRef.current.play();
+          audioRef.current.play().catch(err => {
+            console.error("Erro ao reproduzir áudio:", err);
+            setIsSpeaking(false);
+          });
           audioRef.current.onended = () => setIsSpeaking(false);
         }
       } else {
@@ -768,16 +771,16 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
   }, []);
 
   useEffect(() => {
-    if (news.length === 0 || isAnalyzing || isSpeaking || isGeneratingImage) return;
+    if (news.length === 0 || isAnalyzing || isSpeaking) return;
     const rotate = setInterval(() => {
       setAnalysis(null);
       setCurrentIdx((prev) => (prev + 1) % news.length);
     }, 15000);
     return () => clearInterval(rotate);
-  }, [news, isAnalyzing, isSpeaking, isGeneratingImage]);
+  }, [news, isAnalyzing, isSpeaking]);
 
   const currentNews = news[currentIdx];
-  const currentImageUrl = newsImages[currentIdx];
+  const currentImageUrl = newsImages[currentIdx] || currentNews?.imageUrl;
 
   if (loading && news.length === 0) {
     return (
@@ -809,6 +812,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
             src={currentImageUrl} 
             alt="News background" 
             className="w-full h-full object-cover animate-ken-burns"
+            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
         </div>
