@@ -4,7 +4,8 @@ import {
   WifiOff, Trash2, Plus, MessageCircle, X, Cloud, Sun, CloudRain, 
   CloudLightning, Wind, Droplets, Thermometer, Music, Bot, Send,
   GripHorizontal, Bell, Waves, MapPin, ThermometerSun, ArrowUp, ArrowDown, ThumbsUp, Skull,
-  AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe
+  AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe,
+  TrendingUp, AlertCircle, RefreshCcw, Sparkles, Volume2, Image as ImageIcon, Loader2
 } from 'lucide-react';
 
 // --- GLOBAL DECLARATIONS ---
@@ -150,7 +151,7 @@ const fetchNews = async () => {
   const topics = [
     "Política Brasil e Mundo (Últimos 15 min)",
     "Tecnologia e Inovação (Últimos 15 min)",
-    "Esportes: Flamengo (Últimos 15 min)",
+    "Esportes: Flamengo com técnico Leonardo Jardim (Últimos 15 min)",
     "Esportes: Bahia (Últimos 15 min)",
     "Economia e Mercado (Últimos 15 min)",
     "Ciência e Espaço (Últimos 15 min)",
@@ -159,7 +160,7 @@ const fetchNews = async () => {
   ];
 
   const fetchBatch = async (batchTopics: string[]) => {
-    const now = new Date().toISOString();
+    const now = "2026-03-15T10:00:00Z"; // Hardcoded to March 15, 2026 as requested
     const prompt = `Aja como um robô de notícias ultra-rápido (estilo Breaking News / Twitter). 
     DATA E HORA ATUAL: ${now}. 
     ESTAMOS NO ANO DE 2026. NÃO TRAGA NOTÍCIAS DE ANOS ANTERIORES.
@@ -181,7 +182,7 @@ const fetchNews = async () => {
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
-          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Se não houver notícias de 15 min atrás, pegue as de 1 hora, mas nunca notícias de dias atrás."
+          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Se não houver notícias de 15 min atrás, pegue as de 1 hora, mas nunca notícias de dias atrás. O técnico do Flamengo é Leonardo Jardim."
         }
       });
       
@@ -222,12 +223,12 @@ const fetchNews = async () => {
   const allNews = [...batch1, ...batch2];
 
   if (allNews.length >= 20) {
-    return allNews.sort(() => Math.random() - 0.5).slice(0, 120);
+    return allNews.slice(0, 20);
   }
 
   // Fallback robusto com 20 itens caso a API falhe (Atualizado para Março de 2026)
   return [
-    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O comando técnico definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
+    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
     { source: "Bahia Notícias", headline: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
     { source: "G1 Política", headline: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
     { source: "TechCrunch", headline: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
@@ -242,7 +243,7 @@ const fetchNews = async () => {
     { source: "Reuters", headline: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
     { source: "Wired", headline: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
     { source: "Exame", headline: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
-    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
+    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
     { source: "Bahia Notícias", headline: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
     { source: "Gizmodo", headline: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
     { source: "Valor Econômico", headline: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
@@ -579,119 +580,319 @@ const WeatherWidget = ({ weather, locationName, beachReport, width = 300, onRefr
 };
 
 // 4. News Widget
-const NewsWidget = ({ news, onRefresh }) => {
-  const [index, setIndex] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+const NewsWidget = ({ news: initialNews, onRefresh }) => {
+  const [news, setNews] = useState(initialNews || []);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [loading, setLoading] = useState(!initialNews || initialNews.length === 0);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  
+  // Estados para Imagem e IA
+  const [newsImages, setNewsImages] = useState({}); // Cache de imagens: { index: base64Url }
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef(null);
 
+  // Sync with props
   useEffect(() => {
-    if (news.length === 0) return;
-    setLastUpdated(new Date());
-    const cycleTime = news.length > 50 ? 8000 : 12000;
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setIndex((prev) => (prev + 1) % news.length);
-        setIsTransitioning(false);
-      }, 500);
-    }, cycleTime);
-    return () => clearInterval(interval);
-  }, [news.length]);
+    if (initialNews && initialNews.length > 0) {
+      setNews(initialNews);
+      setLoading(false);
+    }
+  }, [initialNews]);
 
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    await onRefresh();
-    setIsLoading(false);
+  // Função para Gerar Imagem com Imagen 4.0
+  const generateImageForNews = async (index, title) => {
+    if (newsImages[index] || isGeneratingImage || !ai) return;
+
+    setIsGeneratingImage(true);
+    try {
+      const response = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',
+        prompt: `Professional cinematic news photography, high resolution, realistic, related to: ${title}. News broadcast style, dramatic lighting.`,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '16:9',
+        },
+      });
+
+      if (response.generatedImages && response.generatedImages[0]) {
+        const base64Data = response.generatedImages[0].image.imageBytes;
+        const imageUrl = `data:image/jpeg;base64,${base64Data}`;
+        setNewsImages(prev => ({ ...prev, [index]: imageUrl }));
+      }
+    } catch (err) {
+      console.error("Erro ao gerar imagem:", err);
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
-  const currentNews = news[index];
+  // Busca de Notícias (Gemini + Google Search)
+  const fetchNewsInternal = async () => {
+    if (!ai) return;
+    setLoading(true);
+    setError(null);
+    setNewsImages({}); 
+    
+    try {
+      const now = "2026-03-15"; // Hardcoded to March 15, 2026
+      const prompt = `Liste as 20 notícias mais importantes e RECENTES de hoje (${now}) no Brasil e no mundo. O técnico do Flamengo é Leonardo Jardim.`;
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          systemInstruction: "Você é um portal de notícias de elite. Retorne APENAS um JSON: {\"articles\": [{\"title\": \"...\", \"summary\": \"...\", \"source\": \"...\", \"category\": \"...\", \"isBreaking\": boolean}]}. Traga 20 notícias.",
+          responseMimeType: "application/json"
+        }
+      });
 
-  if (!currentNews || isLoading) {
+      const data = JSON.parse(response.text);
+
+      if (data.articles && data.articles.length > 0) {
+        setNews(data.articles);
+        setLastUpdated(new Date());
+        setCurrentIdx(0);
+        generateImageForNews(0, data.articles[0].title);
+      }
+      
+      // Call onRefresh prop if provided to update parent state
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (err) {
+      console.error("Erro ao buscar notícias:", err);
+      setError("Não foi possível carregar o feed de notícias.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (news[currentIdx]) {
+      generateImageForNews(currentIdx, news[currentIdx].title);
+    }
+  }, [currentIdx, news]);
+
+  const analyzeContext = async () => {
+    if (!currentNews || isAnalyzing || !ai) return;
+    setIsAnalyzing(true);
+    setAnalysis(null);
+    try {
+      const prompt = `Explique brevemente por que esta notícia é importante e dê 3 pontos de contexto: "${currentNews.title}". Considere que estamos em 15 de Março de 2026.`;
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt
+      });
+      setAnalysis(response.text || "Contexto não disponível.");
+    } catch (err) {
+      setAnalysis("Erro ao gerar análise.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const playNewsAudio = async () => {
+    if (!currentNews || isSpeaking || !ai) return;
+    setIsSpeaking(true);
+    try {
+      const textToSpeak = `Destaque: ${currentNews.title}. Resumo: ${currentNews.summary}.`;
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: textToSpeak }] }],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } }
+        }
+      });
+      
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        const audioBlob = pcmToWav(base64Audio, 24000);
+        const url = URL.createObjectURL(audioBlob);
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.play();
+          audioRef.current.onended = () => setIsSpeaking(false);
+        }
+      } else {
+        setIsSpeaking(false);
+      }
+    } catch (err) {
+      console.error("Erro no áudio:", err);
+      setIsSpeaking(false);
+    }
+  };
+
+  const pcmToWav = (base64Pcm, sampleRate) => {
+    const pcmBuffer = Uint8Array.from(atob(base64Pcm), c => c.charCodeAt(0)).buffer;
+    const wavHeader = new ArrayBuffer(44);
+    const view = new DataView(wavHeader);
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+    };
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + pcmBuffer.byteLength, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, pcmBuffer.byteLength, true);
+    return new Blob([wavHeader, pcmBuffer], { type: 'audio/wav' });
+  };
+
+  useEffect(() => {
+    if (news.length === 0) {
+      fetchNewsInternal();
+    }
+    const interval = setInterval(fetchNewsInternal, 20 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (news.length === 0 || isAnalyzing || isSpeaking || isGeneratingImage) return;
+    const rotate = setInterval(() => {
+      setAnalysis(null);
+      setCurrentIdx((prev) => (prev + 1) % news.length);
+    }, 15000);
+    return () => clearInterval(rotate);
+  }, [news, isAnalyzing, isSpeaking, isGeneratingImage]);
+
+  const currentNews = news[currentIdx];
+  const currentImageUrl = newsImages[currentIdx];
+
+  if (loading && news.length === 0) {
     return (
       <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 shadow-2xl flex flex-col items-center justify-center text-center">
-        <Bot size={40} className="text-white/20 animate-pulse mb-4" />
-        <p className="text-white/40 text-sm uppercase tracking-widest">{isLoading ? 'Sincronizando com Google News...' : 'Buscando notícias em tempo real...'}</p>
+        <Loader2 size={40} className="text-red-600 animate-spin mb-4" />
+        <p className="text-white/40 text-sm uppercase tracking-widest animate-pulse">Sintonizando Satélites...</p>
+      </div>
+    );
+  }
+
+  if (error && news.length === 0) {
+    return (
+      <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 shadow-2xl flex flex-col items-center justify-center text-center">
+        <AlertTriangle size={40} className="text-red-500 mb-4" />
+        <p className="text-white/60 text-sm mb-4">{error}</p>
+        <button onClick={fetchNewsInternal} className="bg-red-700 hover:bg-red-600 px-6 py-2 rounded-full font-bold transition-all text-xs uppercase">Tentar Novamente</button>
       </div>
     );
   }
 
   return (
     <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative group">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={currentNews.imageUrl} 
-          alt="" 
-          referrerPolicy="no-referrer"
-          className={`w-full h-full object-cover transition-all duration-1000 ${isTransitioning ? 'scale-110 blur-sm opacity-40' : 'scale-100 blur-0 opacity-60'}`}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
-      </div>
+      <audio ref={audioRef} hidden />
+      
+      {/* Background Cinematic Image */}
+      {currentImageUrl && (
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40">
+          <img 
+            src={currentImageUrl} 
+            alt="News background" 
+            className="w-full h-full object-cover animate-ken-burns"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+        </div>
+      )}
 
-      <div className="relative z-10 flex flex-col h-full p-8">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 shrink-0">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-3 text-blue-400">
-              <Globe size={20} className="animate-spin-slow" />
-              <span className="font-black tracking-[0.2em] text-xs uppercase drop-shadow-lg">Breaking News</span>
+      <div className="relative z-10 flex flex-col h-full p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-600 text-white font-black px-2 py-0.5 italic text-[10px] rounded">LIVE NEWS 24/7</div>
+            <div className="hidden sm:flex items-center gap-2 text-white/40 text-[8px] font-bold uppercase tracking-widest">
+              <Globe size={12} className="animate-pulse" /> Global Signal
             </div>
-            <span className="text-[9px] text-white/30 uppercase tracking-widest mt-1">
-              Atualizado: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
           </div>
-          <button onClick={handleRefresh} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50 hover:text-white">
-            <Bot size={18} />
+          <button onClick={() => { onRefresh?.(); fetchNewsInternal(); }} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50">
+            <RefreshCcw size={14} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
 
-        <div className={`flex-1 flex flex-col justify-end transition-all duration-500 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg">
-              {currentNews.source}
-            </span>
-            <span className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">{currentNews.time || 'agora'}</span>
-          </div>
-          
-          <h2 className="text-xl md:text-2xl font-black text-white leading-tight mb-3 tracking-tight drop-shadow-2xl">
-            {currentNews.headline}
-          </h2>
-          
-          <p className="text-sm text-white/80 leading-relaxed mb-6 line-clamp-3 font-medium drop-shadow-md">
-            {currentNews.summary}
-          </p>
+        {/* Content */}
+        {currentNews && (
+          <div className="flex-1 flex flex-col justify-end">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-blue-600/80 text-[8px] font-black uppercase px-2 py-0.5 rounded">{currentNews.category}</span>
+              {currentNews.isBreaking && (
+                <span className="bg-red-600 animate-pulse text-[8px] font-black uppercase px-2 py-0.5 rounded">Urgente</span>
+              )}
+            </div>
 
-          <div className="flex items-center gap-2 text-white/40">
-            <Newspaper size={12} />
-            <span className="text-[9px] uppercase font-black tracking-widest">{currentNews.category}</span>
-          </div>
-        </div>
+            <h2 className="text-lg md:text-xl font-black text-white leading-tight mb-2 tracking-tight line-clamp-2 uppercase italic">
+              {currentNews.title}
+            </h2>
 
-        <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center shrink-0">
-          <div className="flex gap-1 flex-1 mr-4 overflow-hidden">
-            {news.map((_, i) => (
-              <div 
-                key={i} 
-                className={`h-1 rounded-full transition-all duration-500 shrink-0 ${i === index ? 'w-8 bg-blue-500' : 'w-1 bg-white/20'}`}
-                style={{
-                  display: news.length > 20 && Math.abs(i - index) > 5 ? 'none' : 'block'
-                }}
-              ></div>
-            ))}
+            {analysis ? (
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-xl mb-3 relative animate-in fade-in slide-in-from-bottom-2">
+                <button onClick={() => setAnalysis(null)} className="absolute top-2 right-2 text-white/30 hover:text-white"><X size={14}/></button>
+                <div className="text-purple-400 text-[8px] font-bold uppercase mb-1 flex items-center gap-1">
+                  <Sparkles size={10} /> Análise IA
+                </div>
+                <p className="text-[10px] text-slate-200 font-light leading-relaxed line-clamp-3">{analysis}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 font-light mb-4 italic leading-relaxed line-clamp-2">
+                "{currentNews.summary}"
+              </p>
+            )}
+
+            <div className="flex gap-2 mb-4">
+              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-purple-700/60 hover:bg-purple-600 backdrop-blur-md text-[8px] font-black uppercase py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                {isAnalyzing ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Contexto
+              </button>
+              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/60 hover:bg-emerald-600 backdrop-blur-md text-[8px] font-black uppercase py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                {isSpeaking ? <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" /> : <Volume2 size={10} />} Ouvir
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+              <Newspaper size={12} className="text-red-600" />
+              <span className="truncate">FONTE: {currentNews.source}</span>
+              <div className="h-px flex-grow bg-white/10" />
+              <span className="shrink-0">{currentIdx + 1} / {news.length}</span>
+            </div>
           </div>
-          <span className="text-[10px] font-black text-white/30 tabular-nums">
-            {index + 1} / {news.length}
-          </span>
+        )}
+
+        {/* Footer Ticker */}
+        <div className="mt-4 pt-3 border-t border-white/10 flex items-center overflow-hidden shrink-0">
+          <div className="whitespace-nowrap animate-ticker flex items-center gap-8 font-bold text-[9px] text-white/30 uppercase">
+            {news.length > 0 ? [...news, ...news].map((item, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <span className="text-red-700 font-black">•</span>
+                <span>{item.title}</span>
+              </div>
+            )) : <span className="opacity-50">Sintonizando feed global...</span>}
+          </div>
         </div>
       </div>
-      
+
       <style>{`
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes ticker {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
-        .animate-spin-slow {
-          animation: spin-slow 12s linear infinite;
+        .animate-ticker { animation: ticker 60s linear infinite; }
+        
+        @keyframes ken-burns {
+          0% { transform: scale(1) translate(0, 0); }
+          50% { transform: scale(1.1) translate(-1%, -1%); }
+          100% { transform: scale(1) translate(0, 0); }
+        }
+        .animate-ken-burns {
+          animation: ken-burns 30s ease-in-out infinite;
         }
       `}</style>
     </div>
