@@ -1,0 +1,20 @@
+{
+  "name": "Live News 24/7",
+  "short_name": "Live News",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#dc2626",
+  "icons": [
+    {
+      "src": "https://picsum.photos/seed/newsicon/192/192",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://picsum.photos/seed/newsicon/512/512",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

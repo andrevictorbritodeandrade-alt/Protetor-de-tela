@@ -5,7 +5,8 @@ import {
   CloudLightning, Wind, Droplets, Thermometer, Music, Bot, Send,
   GripHorizontal, Bell, Waves, MapPin, ThermometerSun, ArrowUp, ArrowDown, ThumbsUp, Skull,
   AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe,
-  TrendingUp, AlertCircle, RefreshCcw, Sparkles, Volume2, Image as ImageIcon, Loader2
+  TrendingUp, AlertCircle, RefreshCcw, Sparkles, Volume2, Image as ImageIcon, Loader2, Download,
+  Menu, ArrowUpRight, Activity, Eye
 } from 'lucide-react';
 
 // --- GLOBAL DECLARATIONS ---
@@ -74,11 +75,16 @@ class ErrorBoundary extends React.Component<any, any> {
 const fetchWeatherData = async (coords: { lat: number, lon: number }) => {
   try {
     // 1. Fetch Weather Forecast (including UV Index and Sunrise/Sunset)
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,is_day,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`;
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,is_day,wind_speed_10m,uv_index,surface_pressure,visibility,dew_point_2m&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`;
     const weatherRes = await fetch(weatherUrl);
     const weatherData = await weatherRes.json();
 
-    // 2. Fetch Marine Data (Wave height, water temperature)
+    // 2. Fetch Air Quality
+    const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${coords.lat}&longitude=${coords.lon}&current=european_aqi&timezone=auto`;
+    const aqiRes = await fetch(aqiUrl);
+    const aqiData = await aqiRes.json();
+
+    // 3. Fetch Marine Data (Wave height, water temperature)
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&current=wave_height,wave_direction,wave_period,swell_wave_height,water_temperature&timezone=auto`;
     const marineRes = await fetch(marineUrl);
     const marineData = await marineRes.json();
@@ -106,6 +112,10 @@ const fetchWeatherData = async (coords: { lat: number, lon: number }) => {
       sunrise: weatherData.daily?.sunrise?.[0],
       sunset: weatherData.daily?.sunset?.[0],
       utc_offset_seconds: weatherData.utc_offset_seconds,
+      surface_pressure: weatherData.current.surface_pressure,
+      visibility: weatherData.current.visibility,
+      dew_point: weatherData.current.dew_point_2m,
+      aqi: aqiData.current?.european_aqi || 0,
       
       // Marine Data
       wave_height: marineData.current?.wave_height || 0,
@@ -147,56 +157,39 @@ const generateBeachReport = async (weatherData: any, location: string) => {
 
 const fetchNews = async () => {
   const fallbackNews = [
-    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
-    { source: "Bahia Notícias", headline: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
-    { source: "G1 Política", headline: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
-    { source: "TechCrunch", headline: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
-    { source: "CNN Brasil", headline: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ1/800/600", time: "20 min" },
-    { source: "UOL Esporte", headline: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo2/800/600", time: "22 min" },
-    { source: "Folha", headline: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia2/800/600", time: "25 min" },
-    { source: "The Verge", headline: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech2/800/600", time: "30 min" },
-    { source: "Estadão", headline: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ2/800/600", time: "35 min" },
-    { source: "BBC Brasil", headline: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia1/800/600", time: "40 min" },
-    { source: "Globo.com", headline: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo3/800/600", time: "45 min" },
-    { source: "Bahia Notícias", headline: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia3/800/600", time: "50 min" },
-    { source: "Reuters", headline: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
-    { source: "Wired", headline: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
-    { source: "Exame", headline: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
-    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
-    { source: "Bahia Notícias", headline: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
-    { source: "Gizmodo", headline: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
-    { source: "Valor Econômico", headline: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
-    { source: "O Globo", headline: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
+    { source: "Globo Esporte", title: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
+    { source: "Bahia Notícias", title: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
+    { source: "G1 Política", title: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
+    { source: "TechCrunch", title: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
+    { source: "CNN Brasil", title: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ1/800/600", time: "20 min" },
+    { source: "UOL Esporte", title: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo2/800/600", time: "22 min" },
+    { source: "Folha", title: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia2/800/600", time: "25 min" },
+    { source: "The Verge", title: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech2/800/600", time: "30 min" },
+    { source: "Estadão", title: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ2/800/600", time: "35 min" },
+    { source: "BBC Brasil", title: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia1/800/600", time: "40 min" },
+    { source: "Globo.com", title: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo3/800/600", time: "45 min" },
+    { source: "Bahia Notícias", title: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia3/800/600", time: "50 min" },
+    { source: "Reuters", title: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
+    { source: "Wired", title: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
+    { source: "Exame", title: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
+    { source: "Globo Esporte", title: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
+    { source: "Bahia Notícias", title: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
+    { source: "Gizmodo", title: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
+    { source: "Valor Econômico", title: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
+    { source: "O Globo", title: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
   ];
 
   if (!ai) return fallbackNews;
   
-  const topics = [
-    "Política Brasil e Mundo (Últimos 15 min)",
-    "Tecnologia e Inovação (Últimos 15 min)",
-    "Esportes: Flamengo com técnico Leonardo Jardim (Últimos 15 min)",
-    "Esportes: Bahia (Últimos 15 min)",
-    "Economia e Mercado (Últimos 15 min)",
-    "Ciência e Espaço (Últimos 15 min)",
-    "Cultura e Entretenimento (Últimos 15 min)",
-    "Saúde e Bem-estar (Últimos 15 min)"
-  ];
-
-  const fetchBatch = async (batchTopics: string[]) => {
-    const now = "2026-03-15T10:00:00Z"; // Hardcoded to March 15, 2026 as requested
-    const prompt = `Aja como um robô de notícias ultra-rápido (estilo Breaking News / Twitter). 
+  const fetchBatch = async (sources: string, count: number) => {
+    const now = new Date().toISOString();
+    const prompt = `Aja como um agregador de notícias ultra-rápido. 
     DATA E HORA ATUAL: ${now}. 
-    ESTAMOS NO ANO DE 2026. NÃO TRAGA NOTÍCIAS DE ANOS ANTERIORES.
-    Sua missão é buscar as notícias mais RECENTES (preferencialmente dos últimos 15 a 30 minutos DE HOJE, 15 DE MARÇO DE 2026) sobre estes temas: ${batchTopics.join(", ")}.
-    Utilize o Google News para garantir que as notícias são de AGORA.
-    Traga exatamente 15 notícias impactantes por lote.
-    Cada notícia deve ter:
-    1. Manchete curta e urgente.
-    2. Um "spoiler" ou breve explicação (2 frases) que resuma o fato principal.
-    3. Uma URL de imagem real e representativa.
+    Sua missão é buscar as ${count} notícias mais RECENTES (dos últimos minutos/horas de HOJE) EXCLUSIVAMENTE nestes sites: ${sources}.
+    É OBRIGATÓRIO extrair a URL REAL DA IMAGEM DE CAPA (thumbnail) original usada na matéria do site. Não invente URLs.
     
-    Retorne APENAS um array JSON no formato:
-    [{"source": "Google News", "headline": "Título", "summary": "Breve explicação/spoiler", "category": "Tema", "imageUrl": "URL", "time": "há X min"}]
+    Retorne APENAS um array JSON no formato exato:
+    [{"source": "Nome do Site (ex: UOL, O Globo)", "title": "Título da matéria", "summary": "Resumo do texto da notícia em 2 frases", "category": "Tema", "imageUrl": "URL_REAL_DA_IMAGEM_DA_MATERIA", "time": "há X min"}]
     Não use Markdown. Apenas o JSON puro.`;
 
     try {
@@ -205,7 +198,7 @@ const fetchNews = async () => {
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
-          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Se não houver notícias de 15 min atrás, pegue as de 1 hora, mas nunca notícias de dias atrás. O técnico do Flamengo é Leonardo Jardim."
+          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Extraia a imagem original da matéria. O técnico do Flamengo é Leonardo Jardim."
         }
       });
       
@@ -229,8 +222,9 @@ const fetchNews = async () => {
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((item: any) => ({
             ...item,
-            imageUrl: item.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(item.headline)}/800/600`,
-            summary: item.summary || item.headline
+            imageUrl: item.imageUrl && item.imageUrl.startsWith('http') ? item.imageUrl : `https://picsum.photos/seed/${encodeURIComponent(item.title || item.headline)}/800/600`,
+            summary: item.summary || item.title || item.headline,
+            title: item.title || item.headline
           }));
         }
       }
@@ -240,16 +234,28 @@ const fetchNews = async () => {
     return null;
   };
 
-  const batch1 = await fetchBatch(topics.slice(0, 4));
-  const batch2 = await fetchBatch(topics.slice(4));
+  const [batch1, batch2] = await Promise.all([
+    fetchBatch("UOL, O Globo, G1", 25),
+    fetchBatch("Daily Mail, The New York Times, BBC, CNN, Reuters", 25)
+  ]);
   
   const allNews = [...batch1, ...batch2];
 
-  if (allNews.length >= 20) {
-    return allNews.slice(0, 20);
+  if (allNews.length > 0) {
+    // Fill up to 50 if we got fewer, by duplicating some to ensure the carousel is full
+    let finalNews = [...allNews];
+    while (finalNews.length < 50 && finalNews.length > 0) {
+      finalNews = [...finalNews, ...allNews].slice(0, 50);
+    }
+    return finalNews;
   }
 
-  return fallbackNews;
+  // Fallback se tudo falhar, retorna o array de fallback duplicado para chegar a 50
+  let finalFallback = [...fallbackNews];
+  while (finalFallback.length < 50) {
+    finalFallback = [...finalFallback, ...fallbackNews].slice(0, 50);
+  }
+  return finalFallback;
 };
 
 // --- COMPONENTS ---
@@ -401,17 +407,9 @@ const getWeatherIcon = (code: number) => {
   return "☁️";
 };
 
-const WeatherWidget = ({ weather, locationName, beachReport, width = 300, onRefresh }) => {
-  const [slideIndex, setSlideIndex] = useState(0);
+const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, locationName: string, onRefresh: () => void }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-
-  const slides = [
-    { type: 'main', title: 'Agora' },
-    { type: 'marine', title: 'Condições do Mar' },
-    { type: 'details', title: 'Detalhes' },
-    ...(beachReport && beachReport.length > 0 ? beachReport.map(item => ({ type: 'report', title: item.title, text: item.text })) : [])
-  ];
 
   useEffect(() => {
     setIsUpdating(true);
@@ -420,162 +418,330 @@ const WeatherWidget = ({ weather, locationName, beachReport, width = 300, onRefr
     return () => clearTimeout(timer);
   }, [weather]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSlideIndex((prev) => (prev + 1) % slides.length);
-    }, 8000); 
-    return () => clearInterval(interval);
-  }, [slides.length]);
+  if (!weather) return <div className="flex items-center justify-center h-full text-white/50">Carregando clima...</div>;
 
-  const currentSlide = slides[slideIndex];
-  const temp = weather?.temperature ? Math.round(Number(weather.temperature)) : '--';
-
-  // Logic for beach flag based on wave height
-  const getBeachFlag = (waveHeight: number) => {
-    if (waveHeight > 2.0) return { color: 'bg-red-600', text: 'Vermelha', icon: <AlertTriangle size={16} /> };
-    if (waveHeight > 1.2) return { color: 'bg-yellow-500', text: 'Amarela', icon: <Info size={16} /> };
-    return { color: 'bg-green-500', text: 'Verde', icon: <CheckCircle size={16} /> };
+  const temp = Math.round(Number(weather.temperature));
+  const tempMax = Math.round(Number(weather.temp_max));
+  const tempMin = Math.round(Number(weather.temp_min));
+  const apparentTemp = Math.round(Number(weather.apparent_temperature));
+  
+  // Helper for day names
+  const getDayName = (dateString: string, index: number) => {
+    if (index === 0) return 'Hoje';
+    if (index === 1) return 'Amanhã';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', { weekday: 'long' });
   };
 
-  const flag = getBeachFlag(weather?.wave_height || 0);
+  // Condition text
+  const getConditionText = (code: number) => {
+    if (code === 0) return "Ensolarado";
+    if (code <= 3) return "Parcialmente nublado";
+    if (code === 45 || code === 48) return "Neblina";
+    if (code >= 51 && code <= 67) return "Chuva";
+    if (code >= 80 && code <= 82) return "Pancadas de chuva";
+    if (code >= 95) return "Tempestade";
+    if (code >= 71 && code <= 77) return "Neve";
+    return "Nublado";
+  };
 
+  // UV Index text
+  const getUvText = (uv: number) => {
+    if (uv <= 2) return "Baixo";
+    if (uv <= 5) return "Moderado";
+    if (uv <= 7) return "Alto";
+    if (uv <= 10) return "Muito Alto";
+    return "Extremo";
+  };
+
+  // AQI text
+  const getAqiText = (aqi: number) => {
+    if (aqi <= 20) return "Boa";
+    if (aqi <= 40) return "Razoável";
+    if (aqi <= 60) return "Moderada";
+    if (aqi <= 80) return "Ruim";
+    return "Muito Ruim";
+  };
+
+  // Hourly forecast (next 24 hours)
+  const currentHourIndex = weather.hourly?.time?.findIndex((t: string) => new Date(t) > new Date()) || 0;
+  const nextHours = weather.hourly?.time?.slice(currentHourIndex, currentHourIndex + 24) || [];
+  
   return (
-    <div className={`animate-float flex flex-col w-full h-full bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] bg-white/10' : 'scale-100'}`}>
-       <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4 shrink-0">
+    <div className={`animate-float flex flex-col w-full h-full bg-gradient-to-b from-[#4A90E2] to-[#5C9CE6] rounded-[3rem] shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] opacity-90' : 'scale-100'}`}>
+      
+      {/* Header */}
+      <div className="flex justify-between items-center p-6 pb-2 shrink-0 z-10">
+        <div className="flex items-center gap-2 text-white">
+          <Menu size={24} />
+          <span className="text-xl font-medium">{locationName}</span>
+          <MapPin size={16} />
+        </div>
+        <button onClick={(e) => { e.stopPropagation(); onRefresh(); }} className="p-2 text-white/80 hover:text-white transition-colors">
+          <Bot size={20} className={isUpdating ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-6 pb-6 z-10">
+        
+        {/* Main Temp */}
+        <div className="flex justify-between items-start mt-4 mb-8">
+          <div className="flex flex-col text-white">
+            <div className="text-[100px] font-light leading-none tracking-tighter -ml-2">{temp}°</div>
+            <div className="text-2xl font-medium mt-2">{getConditionText(weather.weathercode)}</div>
+            <div className="text-lg mt-4 font-medium opacity-90">
+              {tempMax}° / {tempMin}° Sensação térmica de {apparentTemp}°
+            </div>
+          </div>
+          <div className="text-[80px] leading-none mt-4 drop-shadow-lg">
+            {getWeatherIcon(weather.weathercode)}
+          </div>
+        </div>
+
+        {/* Hourly Forecast Card */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 relative">
+          <p className="text-white font-medium mb-4 text-sm">
+            {getConditionText(weather.weathercode)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
+          </p>
+          <div className="flex overflow-x-auto no-scrollbar gap-6 pb-2 relative">
+            {/* SVG Line Chart */}
+            <svg className="absolute top-16 left-0 w-[800px] h-10 pointer-events-none" preserveAspectRatio="none">
+              <path 
+                d={`M ${nextHours.slice(0, 12).map((_, i) => {
+                  const idx = currentHourIndex + i;
+                  const hTemp = Math.round(weather.hourly.temperature_2m[idx]);
+                  const minT = Math.min(...weather.hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 12));
+                  const maxT = Math.max(...weather.hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 12));
+                  const y = 40 - ((hTemp - minT) / (maxT - minT || 1)) * 30;
+                  return `${i * 64 + 20},${y}`;
+                }).join(' L ')}`}
+                fill="none" stroke="#FBBF24" strokeWidth="2" 
+              />
+              {nextHours.slice(0, 12).map((_, i) => {
+                const idx = currentHourIndex + i;
+                const hTemp = Math.round(weather.hourly.temperature_2m[idx]);
+                const minT = Math.min(...weather.hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 12));
+                const maxT = Math.max(...weather.hourly.temperature_2m.slice(currentHourIndex, currentHourIndex + 12));
+                const y = 40 - ((hTemp - minT) / (maxT - minT || 1)) * 30;
+                return <circle key={i} cx={i * 64 + 20} cy={y} r="3" fill="#FBBF24" />;
+              })}
+            </svg>
+            
+            {nextHours.slice(0, 12).map((timeStr: string, i: number) => {
+              const idx = currentHourIndex + i;
+              const hTemp = Math.round(weather.hourly.temperature_2m[idx]);
+              const hCode = weather.hourly.weather_code[idx];
+              const hPrecip = weather.hourly.precipitation_probability[idx];
+              const date = new Date(timeStr);
+              return (
+                <div key={i} className="flex flex-col items-center min-w-[40px] text-white z-10">
+                  <span className="text-sm mb-2">{i === 0 ? 'Agora' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-2xl mb-2">{getWeatherIcon(hCode)}</span>
+                  <span className="text-lg font-medium mb-6">{hTemp}°</span>
+                  {hPrecip > 0 ? (
+                    <div className="flex items-center gap-1 text-blue-200 text-xs mt-auto">
+                      <Droplets size={10} />
+                      <span>{hPrecip}%</span>
+                    </div>
+                  ) : (
+                    <div className="h-4 mt-auto"></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* UV Index Warning Card */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex flex-col">
+          <div className="flex items-center gap-2 text-white/80 mb-2">
+            <Sun size={16} />
+            <span className="text-sm font-medium">Proteja sua pele</span>
+          </div>
+          <p className="text-white text-sm mb-4">
+            Os raios UV estão {getUvText(weather.uv_index).toLowerCase()}s. Se puder, proteja-se do sol
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, (weather.uv_index / 11) * 100)}%` }}></div>
+            </div>
+            <span className="text-white font-bold text-xl">{weather.uv_index.toFixed(0)}</span>
+          </div>
+        </div>
+
+        {/* 7-Day Forecast Card */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10">
+          <div className="flex flex-col gap-4">
+            {weather.daily?.time?.slice(0, 7).map((dateStr: string, i: number) => (
+              <div key={i} className="flex items-center justify-between text-white">
+                <span className="w-28 text-base font-medium capitalize">{getDayName(dateStr, i)}</span>
+                <div className="flex items-center gap-1 w-16 text-blue-200 text-xs">
+                  {weather.daily.precipitation_probability_max[i] > 0 && (
+                    <>
+                      <Droplets size={12} />
+                      <span>{weather.daily.precipitation_probability_max[i]}%</span>
+                    </>
+                  )}
+                </div>
+                <span className="text-2xl w-10 text-center">{getWeatherIcon(weather.daily.weather_code[i])}</span>
+                <div className="flex justify-end gap-3 w-20 text-base font-medium">
+                  <span>{Math.round(weather.daily.temperature_2m_max[i])}°</span>
+                  <span className="text-white/60">{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Air Quality Card */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex flex-col items-center">
+          <span className="text-white/80 text-xs font-medium uppercase tracking-wider mb-1">IQAR</span>
+          <span className="text-white text-lg font-bold mb-3">{getAqiText(weather.aqi)} ({weather.aqi})</span>
+          <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden flex">
+            <div className="h-full bg-green-400" style={{ width: '20%' }}></div>
+            <div className="h-full bg-yellow-400" style={{ width: '40%' }}></div>
+            <div className="h-full bg-orange-400" style={{ width: '20%' }}></div>
+            <div className="h-full bg-red-500" style={{ width: '20%' }}></div>
+          </div>
+          {/* Simple indicator dot based on AQI */}
+          <div className="w-full relative mt-1">
+             <div className="absolute top-[-10px] w-3 h-3 bg-white rounded-full shadow-md border-2 border-blue-500" style={{ left: `${Math.min(95, (weather.aqi / 100) * 100)}%` }}></div>
+          </div>
+        </div>
+
+        {/* 2x3 Grid of Metrics */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Sun size={14} />
+              <span className="text-xs font-medium">Índice UV</span>
+            </div>
+            <span className="text-white text-xl font-bold">{getUvText(weather.uv_index)}</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Droplets size={14} />
+              <span className="text-xs font-medium">Umidade</span>
+            </div>
+            <span className="text-white text-xl font-bold">{weather.relative_humidity}%</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Wind size={14} />
+              <span className="text-xs font-medium">Vento</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="text-white" size={20} />
+              <span className="text-white text-xl font-bold">{weather.wind_speed} km/h</span>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Thermometer size={14} />
+              <span className="text-xs font-medium">Ponto de orvalho</span>
+            </div>
+            <span className="text-white text-xl font-bold">{Math.round(weather.dew_point)}°</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Activity size={14} />
+              <span className="text-xs font-medium">Pressão</span>
+            </div>
+            <span className="text-white text-xl font-bold">{weather.surface_pressure} mb</span>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 border border-white/10 flex flex-col">
+            <div className="flex items-center gap-2 text-white/80 mb-2">
+              <Eye size={14} />
+              <span className="text-xs font-medium">Visibilidade</span>
+            </div>
+            <span className="text-white text-xl font-bold">{(weather.visibility / 1000).toFixed(2)} km</span>
+          </div>
+        </div>
+
+        {/* Sunrise / Sunset */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex flex-col">
+          <div className="relative h-24 w-full mt-4">
+            {/* Arc */}
+            <svg viewBox="0 0 100 50" className="w-full h-full overflow-visible">
+              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" strokeDasharray="4 4" />
+              <path d="M 10 50 A 40 40 0 0 1 50 10" fill="none" stroke="#FBBF24" strokeWidth="2" />
+              <circle cx="50" cy="10" r="4" fill="#FBBF24" />
+            </svg>
+            <div className="absolute bottom-0 w-full h-[1px] bg-white/20"></div>
+          </div>
+          <div className="flex justify-between text-white mt-2">
+            <div className="flex flex-col">
+              <span className="text-xs font-medium text-white/80">Nascer do sol</span>
+              <span className="text-lg font-bold">{new Date(weather.sunrise).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-xs font-medium text-white/80">Pôr-do-sol</span>
+              <span className="text-lg font-bold">{new Date(weather.sunset).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Moon Phase */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex justify-between items-center text-white">
           <div className="flex flex-col">
-            <div key={temp} className="animate-fade-in font-bold leading-none tracking-tighter text-white" style={{ fontSize: `${Math.max(40, Math.min(100, width/3.5))}px` }}>
-               {temp}°
+            <span className="text-xs font-medium text-white/80">Pôr da lua</span>
+            <span className="text-lg font-bold">--:--</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-gray-300 shadow-[inset_-10px_0_20px_rgba(0,0,0,0.5)] mb-2"></div>
+            <span className="text-xs font-medium">Lua gibosa</span>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-xs font-medium text-white/80">Nascer da lua</span>
+            <span className="text-lg font-bold">13:42</span>
+          </div>
+        </div>
+
+        {/* Radar Map Placeholder */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex flex-col">
+          <span className="text-white/80 text-xs font-medium uppercase tracking-wider mb-2">Radar e mapas</span>
+          <div className="w-full h-40 rounded-2xl overflow-hidden relative bg-blue-900/50">
+            <img src="https://picsum.photos/seed/radar/800/400" alt="Radar Map" className="w-full h-full object-cover opacity-80 mix-blend-overlay" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+              <span className="text-white text-sm font-medium">Temperatura atual de {temp}°</span>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-bold uppercase tracking-widest text-white/40">{locationName}</span>
-              <div className={`px-2 py-0.5 rounded-full ${flag.color} text-[10px] font-bold text-white flex items-center gap-1 uppercase`}>
-                {flag.text}
-              </div>
+          </div>
+        </div>
+
+        {/* Lifestyle Indices */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-5 mb-4 border border-white/10 flex flex-col gap-4 text-white">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Sparkles size={18} className="text-white/80" />
+              <span className="font-medium">Pólen</span>
             </div>
+            <span className="font-bold">Nenhum</span>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <div key={weather?.weathercode} className="animate-fade-in" style={{ fontSize: `${Math.max(40, Math.min(80, width/3.5))}px`, lineHeight: 1 }}>
-               {getWeatherIcon(weather?.weathercode || 0)}
+          <div className="w-full h-[1px] bg-white/10"></div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Activity size={18} className="text-white/80" />
+              <span className="font-medium">Corrida</span>
             </div>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onRefresh(); }}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white/50 hover:text-white"
-              title="Atualizar clima"
-            >
-              <Bot size={16} className={isUpdating ? 'animate-spin' : ''} />
-            </button>
+            <span className="font-bold">Muito Ruim</span>
           </div>
-       </div>
-       
-       <div className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
-          <div className="flex items-center gap-2 mb-4">
-             <div className="h-[2px] flex-1 bg-yellow-400/30"></div>
-             <span className="text-[10px] uppercase tracking-[0.3em] text-yellow-400 font-bold whitespace-nowrap">{currentSlide.title}</span>
-             <div className="h-[2px] flex-1 bg-yellow-400/30"></div>
+          <div className="w-full h-[1px] bg-white/10"></div>
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={18} className="text-white/80" />
+              <span className="font-medium">Dificuldade para dirigir</span>
+            </div>
+            <span className="font-bold">Nenhum</span>
           </div>
+        </div>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar">
-            {currentSlide.type === 'main' && (
-              <div className="animate-fade-in grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <Wind className="text-blue-400 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Vento</span>
-                  <span className="text-sm font-bold">{weather?.wind_speed} km/h</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <Droplets className="text-blue-300 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Chuva</span>
-                  <span className="text-sm font-bold">{weather?.precipitation_probability}%</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <Thermometer className="text-orange-400 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Sensação</span>
-                  <span className="text-sm font-bold">{Math.round(weather?.apparent_temperature || 0)}°</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <Sun className="text-yellow-400 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">UV</span>
-                  <span className="text-sm font-bold">{weather?.uv_index?.toFixed(1)}</span>
-                </div>
-              </div>
-            )}
+        <div className="flex justify-between items-center mt-6 text-white/50 text-xs">
+          <span>The Weather Channel</span>
+          <span>Atual. {lastUpdated.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}, {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
 
-            {currentSlide.type === 'marine' && (
-              <div className="animate-fade-in grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                  <Waves className="text-blue-400 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Ondas</span>
-                  <span className="text-sm font-bold">{weather?.wave_height?.toFixed(1)}m</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                  <Thermometer className="text-blue-300 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Água</span>
-                  <span className="text-sm font-bold">{weather?.water_temp?.toFixed(1)}°C</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                  <Clock className="text-blue-200 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Período</span>
-                  <span className="text-sm font-bold">{weather?.wave_period}s</span>
-                </div>
-                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-                  <Navigation className="text-blue-100 mb-1" size={18} />
-                  <span className="text-[10px] uppercase text-white/40 font-bold">Bandeira</span>
-                  <span className="text-sm font-bold">{flag.text}</span>
-                </div>
-              </div>
-            )}
-
-            {currentSlide.type === 'details' && (
-              <div className="animate-fade-in space-y-3">
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <ArrowUp className="text-red-400" size={14} />
-                    <span className="text-[10px] uppercase text-white/40 font-bold">Máxima</span>
-                  </div>
-                  <span className="text-sm font-bold">{Math.round(weather?.temp_max || 0)}°C</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <ArrowDown className="text-blue-400" size={14} />
-                    <span className="text-[10px] uppercase text-white/40 font-bold">Mínima</span>
-                  </div>
-                  <span className="text-sm font-bold">{Math.round(weather?.temp_min || 0)}°C</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <CloudRain className="text-blue-300" size={14} />
-                    <span className="text-[10px] uppercase text-white/40 font-bold">Precipitação</span>
-                  </div>
-                  <span className="text-sm font-bold">{weather?.precipitation}mm</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <Sun className="text-yellow-400" size={14} />
-                    <span className="text-[10px] uppercase text-white/40 font-bold">UV Máx</span>
-                  </div>
-                  <span className="text-sm font-bold">{weather?.uv_max?.toFixed(1)}</span>
-                </div>
-              </div>
-            )}
-
-            {currentSlide.type === 'report' && (
-              <div key={currentSlide.title} className="animate-fade-in w-full px-2">
-                <p className="text-sm md:text-base text-white/80 font-light leading-relaxed">{currentSlide.text}</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center shrink-0">
-             <div className="flex gap-1">
-                {slides.map((_, i) => (
-                  <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === slideIndex ? 'w-4 bg-yellow-400' : 'w-1 bg-white/20'}`}></div>
-                ))}
-             </div>
-             <span className="text-[9px] font-light text-white/30 tracking-widest uppercase">
-                Atualizado às {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-             </span>
-          </div>
-       </div>
+      </div>
     </div>
   );
 };
@@ -588,9 +754,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   
-  // Estados para Imagem e IA
-  const [newsImages, setNewsImages] = useState({}); // Cache de imagens: { index: base64Url }
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  // Estados para IA
   const [analysis, setAnalysis] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -604,68 +768,19 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
     }
   }, [initialNews]);
 
-  // Função para Gerar Imagem com Imagen 4.0
-  const generateImageForNews = async (index, title) => {
-    if (newsImages[index] || isGeneratingImage || !ai) return;
-
-    setIsGeneratingImage(true);
-    try {
-      const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: `Professional cinematic news photography, high resolution, realistic, related to: ${title}. News broadcast style, dramatic lighting.`,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/jpeg',
-          aspectRatio: '16:9',
-        },
-      });
-
-      if (response.generatedImages && response.generatedImages[0]) {
-        const base64Data = response.generatedImages[0].image.imageBytes;
-        const imageUrl = `data:image/jpeg;base64,${base64Data}`;
-        setNewsImages(prev => ({ ...prev, [index]: imageUrl }));
-      }
-    } catch (err) {
-      console.error("Erro ao gerar imagem:", err);
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
-
   // Busca de Notícias (Gemini + Google Search)
   const fetchNewsInternal = async () => {
     setLoading(true);
     setError(null);
-    setNewsImages({}); 
-    
-    if (!ai) {
-      // Use global fetchNews which has fallback
-      const fallback = await fetchNews();
-      setNews(fallback);
-      setLoading(false);
-      return;
-    }
     
     try {
-      const now = "2026-03-15"; // Hardcoded to March 15, 2026
-      const prompt = `Liste as 20 notícias mais importantes e RECENTES de hoje (${now}) no Brasil e no mundo. O técnico do Flamengo é Leonardo Jardim.`;
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction: "Você é um portal de notícias de elite. Retorne APENAS um JSON: {\"articles\": [{\"title\": \"...\", \"summary\": \"...\", \"source\": \"...\", \"category\": \"...\", \"isBreaking\": boolean}]}. Traga 20 notícias.",
-          responseMimeType: "application/json"
-        }
-      });
-
-      const data = JSON.parse(response.text);
-
-      if (data.articles && data.articles.length > 0) {
-        setNews(data.articles);
+      const fetchedNews = await fetchNews();
+      if (fetchedNews && fetchedNews.length > 0) {
+        setNews(fetchedNews);
         setLastUpdated(new Date());
         setCurrentIdx(0);
-        generateImageForNews(0, data.articles[0].title);
+      } else {
+        setError("Não foi possível carregar o feed de notícias.");
       }
       
       // Call onRefresh prop if provided to update parent state
@@ -679,12 +794,6 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (news[currentIdx]) {
-      generateImageForNews(currentIdx, news[currentIdx].title);
-    }
-  }, [currentIdx, news]);
 
   const analyzeContext = async () => {
     if (!currentNews || isAnalyzing || !ai) return;
@@ -780,7 +889,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
   }, [news, isAnalyzing, isSpeaking]);
 
   const currentNews = news[currentIdx];
-  const currentImageUrl = newsImages[currentIdx] || currentNews?.imageUrl;
+  const currentImageUrl = currentNews?.imageUrl;
 
   if (loading && news.length === 0) {
     return (
@@ -1065,6 +1174,28 @@ const App = () => {
   const [weather, setWeather] = useState(null);
   const [beachReport, setBeachReport] = useState([{title: 'Carregando', text: 'Gerando relatório...'}]);
   const [news, setNews] = useState([]);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      installPrompt.userChoice.then((choiceResult: any) => {
+        if (choiceResult.outcome === 'accepted') {
+          setInstallPrompt(null);
+        }
+      });
+    }
+  };
+
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [hasStarted, setHasStarted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1377,7 +1508,7 @@ const App = () => {
           </ResizableWidget>
           
           <ResizableWidget width={widgets.weather.width} height={widgets.weather.height} locked={isLayoutLocked} position={{ x: widgets.weather.x, y: widgets.weather.y }} isSelected={selectedWidget === 'weather'} onSelect={() => setSelectedWidget('weather')} onResize={(w, h) => updateWidget('weather', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('weather', { x, y })}>
-            <WeatherWidget weather={weather} locationName={locationName} beachReport={beachReport} width={widgets.weather.width} onRefresh={loadData} />
+            <WeatherWidget weather={weather} locationName={locationName} onRefresh={loadData} />
           </ResizableWidget>
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>
@@ -1414,6 +1545,11 @@ const App = () => {
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[55] flex gap-4 bg-black/50 backdrop-blur-xl p-3 rounded-full border border-white/10"
           onPointerDown={(e) => e.stopPropagation()} 
         >
+          {installPrompt && (
+            <button onClick={handleInstall} className="p-4 rounded-full border-2 bg-green-500 border-green-400 text-black hover:scale-110 transition-transform shadow-lg shadow-green-500/20 mr-2" title="Instalar App">
+               <Download size={24}/>
+            </button>
+          )}
           <button onClick={() => setIsChatOpen(true)} className="p-4 rounded-full border-2 bg-yellow-500 border-yellow-400 text-black hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
              <MessageCircle size={24}/>
           </button>
