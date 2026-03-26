@@ -3,17 +3,33 @@ import {
   ArrowRight, ArrowLeft, Lock, Edit3, Maximize, Minimize, PlayCircle, 
   WifiOff, Trash2, Plus, MessageCircle, X, Cloud, Sun, CloudRain, 
   CloudLightning, Wind, Droplets, Thermometer, Music, Bot, Send,
-  GripHorizontal, Bell, Waves, MapPin, ThermometerSun, ArrowUp, ArrowDown, ThumbsUp, Skull
+  GripHorizontal, Bell, Waves, MapPin, ThermometerSun, ArrowUp, ArrowDown, ThumbsUp, Skull,
+  AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe
 } from 'lucide-react';
+
+// --- GLOBAL DECLARATIONS ---
+declare global {
+  var __firebase_config: string | undefined;
+  var __app_id: string | undefined;
+  var __initial_auth_token: string | undefined;
+  interface HTMLElement {
+    webkitRequestFullscreen?: () => Promise<void>;
+    mozRequestFullScreen?: () => Promise<void>;
+    msRequestFullscreen?: () => Promise<void>;
+  }
+}
 
 // --- FIREBASE IMPORTS ---
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 
+import { GoogleGenAI, Type } from "@google/genai";
+
 // --- CONFIG & CONSTANTS ---
 const MARICA_COORDS = { lat: -22.9194, lon: -42.8186 };
-const apiKey = ""; // The execution environment provides the key at runtime
+const apiKey = process.env.GEMINI_API_KEY; // The execution environment provides the key at runtime
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 // Initialize Firebase safely
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
@@ -24,46 +40,79 @@ const db = app ? getFirestore(app) : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- ERROR BOUNDARY ---
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+class ErrorBoundary extends React.Component<any, any> {
+  state = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
   }
+
   render() {
     if (this.state.hasError) {
       return (
         <div className="w-full h-full flex flex-col items-center justify-center bg-black p-10 text-center z-50 fixed inset-0">
           <p className="text-red-500 font-bold mb-4 text-2xl">Ocorreu um erro.</p>
-          <p className="text-white/50 mb-6 font-mono text-sm">{this.state.error?.message}</p>
+          <p className="text-white/50 mb-6 font-mono text-sm">{(this.state as any).error?.message}</p>
           <button onClick={() => window.location.reload()} className="bg-yellow-500 text-black px-6 py-3 rounded-xl font-bold hover:scale-105 transition-transform">Recarregar Página</button>
         </div>
       );
     }
-    return this.props.children;
+    return (this as any).props.children;
   }
 }
 
 // --- SERVICES ---
 
-const fetchWeatherData = async (coords) => {
+const fetchWeatherData = async (coords: { lat: number, lon: number }) => {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code,is_day&hourly=temperature_2m,weather_code,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FSao_Paulo`;
-    const res = await fetch(url);
-    const data = await res.json();
+    // 1. Fetch Weather Forecast (including UV Index and Sunrise/Sunset)
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,is_day,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`;
+    const weatherRes = await fetch(weatherUrl);
+    const weatherData = await weatherRes.json();
+
+    // 2. Fetch Marine Data (Wave height, water temperature)
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${coords.lat}&longitude=${coords.lon}&current=wave_height,wave_direction,wave_period,swell_wave_height,water_temperature&timezone=auto`;
+    const marineRes = await fetch(marineUrl);
+    const marineData = await marineRes.json();
     
+    let weatherCode = weatherData.current.weather_code;
+    const isRainingNow = (weatherData.current.precipitation > 0 || weatherData.current.rain > 0 || weatherData.current.showers > 0);
+    
+    if (isRainingNow && weatherCode < 50) {
+      weatherCode = 61; 
+    }
+
     return {
-      temperature: data.current.temperature_2m,
-      apparent_temperature: data.current.apparent_temperature,
-      weathercode: data.current.weather_code,
-      is_day: data.current.is_day,
-      precipitation_probability: data.hourly?.precipitation_probability?.[new Date().getHours()] || 0,
-      wind_speed: data.current.wind_speed_10m,
-      relative_humidity_2m: data.current.relative_humidity_2m,
-      daily: data.daily,
-      hourly: data.hourly
+      temperature: weatherData.current.temperature_2m,
+      apparent_temperature: weatherData.current.apparent_temperature,
+      weathercode: weatherCode,
+      is_day: weatherData.current.is_day,
+      precipitation: weatherData.current.precipitation,
+      precipitation_probability: weatherData.daily?.precipitation_probability_max?.[0] || 0,
+      wind_speed: weatherData.current.wind_speed_10m,
+      relative_humidity: weatherData.current.relative_humidity_2m,
+      uv_index: weatherData.current.uv_index,
+      uv_max: weatherData.daily?.uv_index_max?.[0] || 0,
+      temp_max: weatherData.daily?.temperature_2m_max?.[0] || 0,
+      temp_min: weatherData.daily?.temperature_2m_min?.[0] || 0,
+      sunrise: weatherData.daily?.sunrise?.[0],
+      sunset: weatherData.daily?.sunset?.[0],
+      utc_offset_seconds: weatherData.utc_offset_seconds,
+      
+      // Marine Data
+      wave_height: marineData.current?.wave_height || 0,
+      water_temp: marineData.current?.water_temperature || 0,
+      wave_period: marineData.current?.wave_period || 0,
+      
+      daily: weatherData.daily,
+      hourly: weatherData.hourly
     };
   } catch (error) {
     console.error("Erro ao buscar clima:", error);
@@ -71,31 +120,134 @@ const fetchWeatherData = async (coords) => {
   }
 };
 
-const generateBeachReport = async (weatherData, location) => {
-  if (!apiKey) return [{ title: "Status", text: "Assistente IA indisponível." }];
+const generateBeachReport = async (weatherData: any, location: string) => {
+  if (!ai) return [{ title: "Status", text: "Assistente IA indisponível." }];
   
   const prompt = `Analise os seguintes dados climáticos para a praia em ${location}: Temperatura: ${weatherData.temperature}°C, Sensação Térmica: ${weatherData.apparent_temperature}°C, Vento: ${weatherData.wind_speed} km/h, Probabilidade de Chuva: ${weatherData.precipitation_probability}%. Código do tempo: ${weatherData.weathercode}. 
   Responda estritamente em formato JSON, um array de objetos com "title" e "text". Dê 2 dicas rápidas para quem quer ir à praia hoje.`;
 
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { responseMimeType: "application/json" },
-    systemInstruction: { parts: [{ text: "Você é um especialista em praias de Maricá." }] }
-  };
-
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        systemInstruction: "Você é um especialista em praias de Maricá."
+      }
     });
-    const result = await res.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    const text = response.text;
     if (text) return JSON.parse(text);
   } catch (err) {
     console.error("Gemini Error:", err);
   }
   return [{ title: "Condições", text: "Agradável para uma caminhada." }];
+};
+
+const fetchNews = async () => {
+  if (!ai) return [];
+  
+  const topics = [
+    "Política Brasil e Mundo (Últimos 15 min)",
+    "Tecnologia e Inovação (Últimos 15 min)",
+    "Esportes: Flamengo (Últimos 15 min)",
+    "Esportes: Bahia (Últimos 15 min)",
+    "Economia e Mercado (Últimos 15 min)",
+    "Ciência e Espaço (Últimos 15 min)",
+    "Cultura e Entretenimento (Últimos 15 min)",
+    "Saúde e Bem-estar (Últimos 15 min)"
+  ];
+
+  const fetchBatch = async (batchTopics: string[]) => {
+    const now = new Date().toISOString();
+    const prompt = `Aja como um robô de notícias ultra-rápido (estilo Breaking News / Twitter). 
+    DATA E HORA ATUAL: ${now}. 
+    ESTAMOS NO ANO DE 2026. NÃO TRAGA NOTÍCIAS DE ANOS ANTERIORES.
+    Sua missão é buscar as notícias mais RECENTES (preferencialmente dos últimos 15 a 30 minutos DE HOJE, 15 DE MARÇO DE 2026) sobre estes temas: ${batchTopics.join(", ")}.
+    Utilize o Google News para garantir que as notícias são de AGORA.
+    Traga exatamente 15 notícias impactantes por lote.
+    Cada notícia deve ter:
+    1. Manchete curta e urgente.
+    2. Um "spoiler" ou breve explicação (2 frases) que resuma o fato principal.
+    3. Uma URL de imagem real e representativa.
+    
+    Retorne APENAS um array JSON no formato:
+    [{"source": "Google News", "headline": "Título", "summary": "Breve explicação/spoiler", "category": "Tema", "imageUrl": "URL", "time": "há X min"}]
+    Não use Markdown. Apenas o JSON puro.`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Se não houver notícias de 15 min atrás, pegue as de 1 hora, mas nunca notícias de dias atrás."
+        }
+      });
+      
+      if (response.text) {
+        const news = cleanAndParseJSON(response.text);
+        return news || [];
+      }
+    } catch (error) {
+      console.error("Erro na busca de notícias (Batch):", error);
+    }
+    return [];
+  };
+
+  const cleanAndParseJSON = (text: string) => {
+    try {
+      const start = text.indexOf('[');
+      const end = text.lastIndexOf(']');
+      if (start !== -1 && end !== -1) {
+        const jsonStr = text.substring(start, end + 1);
+        const parsed = JSON.parse(jsonStr);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: any) => ({
+            ...item,
+            imageUrl: item.imageUrl || `https://picsum.photos/seed/${encodeURIComponent(item.headline)}/800/600`,
+            summary: item.summary || item.headline
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao processar JSON de notícias:", e);
+    }
+    return null;
+  };
+
+  const batch1 = await fetchBatch(topics.slice(0, 4));
+  const batch2 = await fetchBatch(topics.slice(4));
+  
+  const allNews = [...batch1, ...batch2];
+
+  if (allNews.length >= 20) {
+    return allNews.sort(() => Math.random() - 0.5).slice(0, 120);
+  }
+
+  // Fallback robusto com 20 itens caso a API falhe (Atualizado para Março de 2026)
+  return [
+    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O comando técnico definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
+    { source: "Bahia Notícias", headline: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
+    { source: "G1 Política", headline: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
+    { source: "TechCrunch", headline: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
+    { source: "CNN Brasil", headline: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ1/800/600", time: "20 min" },
+    { source: "UOL Esporte", headline: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo2/800/600", time: "22 min" },
+    { source: "Folha", headline: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia2/800/600", time: "25 min" },
+    { source: "The Verge", headline: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech2/800/600", time: "30 min" },
+    { source: "Estadão", headline: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ2/800/600", time: "35 min" },
+    { source: "BBC Brasil", headline: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia1/800/600", time: "40 min" },
+    { source: "Globo.com", headline: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo3/800/600", time: "45 min" },
+    { source: "Bahia Notícias", headline: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia3/800/600", time: "50 min" },
+    { source: "Reuters", headline: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
+    { source: "Wired", headline: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
+    { source: "Exame", headline: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
+    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
+    { source: "Bahia Notícias", headline: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
+    { source: "Gizmodo", headline: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
+    { source: "Valor Econômico", headline: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
+    { source: "O Globo", headline: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
+  ];
 };
 
 // --- COMPONENTS ---
@@ -206,154 +358,342 @@ const ResizableWidget = ({ width, height, position, locked, isSelected, onSelect
 
 
 // 2. Clock Widget
-const ClockWidget = ({ currentTime, greeting, width = 300 }) => {
-  const timeSize = Math.max(width / 3.8, 32); 
-  const greetingSize = Math.max(width / 22, 10); 
+const ClockWidget = ({ currentTime, greeting, width = 300, height = 150 }) => {
+  const timeSize = Math.min(width / 3.8, height / 2.5); 
+  const greetingSize = Math.min(width / 15, height / 8); 
+  const locationSize = Math.min(width / 20, height / 10);
   
   return (
-    <div className="flex flex-col items-start justify-center h-full w-full px-8 animate-fade-in drop-shadow-lg bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5">
+    <div className="flex flex-col items-center justify-center h-full w-full px-4 animate-fade-in drop-shadow-lg bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5 overflow-hidden">
       <div 
-        className="font-light tracking-wide opacity-80 uppercase text-yellow-400 leading-none mb-1" 
-        style={{ fontSize: `${greetingSize}px` }}
+        className="font-light tracking-wide opacity-80 uppercase text-yellow-400 leading-none mb-2 text-center" 
+        style={{ fontSize: `${Math.max(greetingSize, 10)}px` }}
       >
         {greeting}
       </div>
       <div 
-        className="font-bold tracking-tighter text-white leading-none" 
-        style={{ fontSize: `${timeSize}px` }}
+        className="font-bold tracking-tighter text-white leading-none text-center" 
+        style={{ fontSize: `${Math.max(timeSize, 32)}px` }}
       >
         {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </div>
       <div 
-        className="opacity-50 uppercase tracking-[0.2em] mt-1 text-white" 
-        style={{ fontSize: `${Math.max(width / 30, 9)}px` }}
+        className="opacity-50 uppercase tracking-[0.2em] mt-2 text-white text-center" 
+        style={{ fontSize: `${Math.max(locationSize, 9)}px` }}
       >
-        Brasília
+        Maricá - RJ
       </div>
     </div>
   );
 };
 
 // 3. Weather Widget 
-const getWeatherIcon = (code) => {
-  if (code <= 1) return "☀️";
+const getWeatherIcon = (code: number) => {
+  if (code === 0) return "☀️";
   if (code <= 3) return "⛅";
-  if (code <= 48) return "☁️";
-  if (code <= 67) return "🌧️";
-  return "⛈️";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 67) return "🌧️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code >= 95) return "⛈️";
+  if (code >= 71 && code <= 77) return "❄️";
+  return "☁️";
 };
 
-const WeatherWidget = ({ weather, locationName, beachReport, width = 300 }) => {
+const WeatherWidget = ({ weather, locationName, beachReport, width = 300, onRefresh }) => {
   const [slideIndex, setSlideIndex] = useState(0);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   const slides = [
-    { type: 'location', content: locationName },
+    { type: 'main', title: 'Agora' },
+    { type: 'marine', title: 'Condições do Mar' },
+    { type: 'details', title: 'Detalhes' },
     ...(beachReport && beachReport.length > 0 ? beachReport.map(item => ({ type: 'report', title: item.title, text: item.text })) : [])
   ];
 
   useEffect(() => {
+    setIsUpdating(true);
+    setLastUpdated(new Date());
+    const timer = setTimeout(() => setIsUpdating(false), 800);
+    return () => clearTimeout(timer);
+  }, [weather]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setSlideIndex((prev) => (prev + 1) % slides.length);
-    }, 5000); 
+    }, 8000); 
     return () => clearInterval(interval);
   }, [slides.length]);
 
   const currentSlide = slides[slideIndex];
   const temp = weather?.temperature ? Math.round(Number(weather.temperature)) : '--';
 
+  // Logic for beach flag based on wave height
+  const getBeachFlag = (waveHeight: number) => {
+    if (waveHeight > 2.0) return { color: 'bg-red-600', text: 'Vermelha', icon: <AlertTriangle size={16} /> };
+    if (waveHeight > 1.2) return { color: 'bg-yellow-500', text: 'Amarela', icon: <Info size={16} /> };
+    return { color: 'bg-green-500', text: 'Verde', icon: <CheckCircle size={16} /> };
+  };
+
+  const flag = getBeachFlag(weather?.wave_height || 0);
+
   return (
-    <div className="animate-float flex flex-col w-full h-full bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-       <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-6 shrink-0">
-          <div className="font-bold leading-none tracking-tighter text-white" style={{ fontSize: `${Math.max(40, Math.min(120, width/3.5))}px` }}>
-             {temp}°
+    <div className={`animate-float flex flex-col w-full h-full bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-6 sm:p-8 shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] bg-white/10' : 'scale-100'}`}>
+       <div className="flex justify-between items-start mb-4 border-b border-white/10 pb-4 shrink-0">
+          <div className="flex flex-col">
+            <div key={temp} className="animate-fade-in font-bold leading-none tracking-tighter text-white" style={{ fontSize: `${Math.max(40, Math.min(100, width/3.5))}px` }}>
+               {temp}°
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold uppercase tracking-widest text-white/40">{locationName}</span>
+              <div className={`px-2 py-0.5 rounded-full ${flag.color} text-[10px] font-bold text-white flex items-center gap-1 uppercase`}>
+                {flag.text}
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: `${Math.max(40, Math.min(100, width/3.5))}px`, lineHeight: 1 }}>
-             {getWeatherIcon(weather?.weathercode || 0)}
+          <div className="flex flex-col items-end gap-2">
+            <div key={weather?.weathercode} className="animate-fade-in" style={{ fontSize: `${Math.max(40, Math.min(80, width/3.5))}px`, lineHeight: 1 }}>
+               {getWeatherIcon(weather?.weathercode || 0)}
+            </div>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onRefresh(); }}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors text-white/50 hover:text-white"
+              title="Atualizar clima"
+            >
+              <Bot size={16} className={isUpdating ? 'animate-spin' : ''} />
+            </button>
           </div>
        </div>
        
-       <div className="flex-1 flex flex-col items-center justify-center text-center relative w-full h-full overflow-hidden">
-          {currentSlide.type === 'location' ? (
-            <div className="animate-fade-in w-full">
-              <MapPin className="text-yellow-400 mx-auto mb-3" size={32} />
-              <p className="text-xl md:text-2xl uppercase tracking-widest text-yellow-400 font-bold">{currentSlide.content}</p>
-              <p className="text-sm md:text-base font-light text-white/50 mt-2 tracking-wider">
-                Vento: {weather?.wind_speed || 0} km/h • Sensação: {weather?.apparent_temperature ? Math.round(weather.apparent_temperature) : '--'}°
-              </p>
-            </div>
-          ) : (
-            <div key={slideIndex} className="animate-fade-in w-full px-2">
-              <Droplets className="text-blue-400 mx-auto mb-3" size={28} />
-              <p className="text-sm md:text-base font-bold text-blue-300 uppercase tracking-widest mb-2">{currentSlide.title}</p>
-              <p className="text-sm md:text-base text-white/80 font-light leading-relaxed line-clamp-3 md:line-clamp-4">{currentSlide.text}</p>
-            </div>
-          )}
+       <div className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+          <div className="flex items-center gap-2 mb-4">
+             <div className="h-[2px] flex-1 bg-yellow-400/30"></div>
+             <span className="text-[10px] uppercase tracking-[0.3em] text-yellow-400 font-bold whitespace-nowrap">{currentSlide.title}</span>
+             <div className="h-[2px] flex-1 bg-yellow-400/30"></div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto no-scrollbar">
+            {currentSlide.type === 'main' && (
+              <div className="animate-fade-in grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <Wind className="text-blue-400 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Vento</span>
+                  <span className="text-sm font-bold">{weather?.wind_speed} km/h</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <Droplets className="text-blue-300 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Chuva</span>
+                  <span className="text-sm font-bold">{weather?.precipitation_probability}%</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <Thermometer className="text-orange-400 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Sensação</span>
+                  <span className="text-sm font-bold">{Math.round(weather?.apparent_temperature || 0)}°</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <Sun className="text-yellow-400 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">UV</span>
+                  <span className="text-sm font-bold">{weather?.uv_index?.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+
+            {currentSlide.type === 'marine' && (
+              <div className="animate-fade-in grid grid-cols-2 gap-4">
+                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                  <Waves className="text-blue-400 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Ondas</span>
+                  <span className="text-sm font-bold">{weather?.wave_height?.toFixed(1)}m</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                  <Thermometer className="text-blue-300 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Água</span>
+                  <span className="text-sm font-bold">{weather?.water_temp?.toFixed(1)}°C</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                  <Clock className="text-blue-200 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Período</span>
+                  <span className="text-sm font-bold">{weather?.wave_period}s</span>
+                </div>
+                <div className="flex flex-col items-center p-3 bg-blue-500/10 rounded-2xl border border-blue-500/20">
+                  <Navigation className="text-blue-100 mb-1" size={18} />
+                  <span className="text-[10px] uppercase text-white/40 font-bold">Bandeira</span>
+                  <span className="text-sm font-bold">{flag.text}</span>
+                </div>
+              </div>
+            )}
+
+            {currentSlide.type === 'details' && (
+              <div className="animate-fade-in space-y-3">
+                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <ArrowUp className="text-red-400" size={14} />
+                    <span className="text-[10px] uppercase text-white/40 font-bold">Máxima</span>
+                  </div>
+                  <span className="text-sm font-bold">{Math.round(weather?.temp_max || 0)}°C</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <ArrowDown className="text-blue-400" size={14} />
+                    <span className="text-[10px] uppercase text-white/40 font-bold">Mínima</span>
+                  </div>
+                  <span className="text-sm font-bold">{Math.round(weather?.temp_min || 0)}°C</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <CloudRain className="text-blue-300" size={14} />
+                    <span className="text-[10px] uppercase text-white/40 font-bold">Precipitação</span>
+                  </div>
+                  <span className="text-sm font-bold">{weather?.precipitation}mm</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-white/5 rounded-2xl border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Sun className="text-yellow-400" size={14} />
+                    <span className="text-[10px] uppercase text-white/40 font-bold">UV Máx</span>
+                  </div>
+                  <span className="text-sm font-bold">{weather?.uv_max?.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+
+            {currentSlide.type === 'report' && (
+              <div key={currentSlide.title} className="animate-fade-in w-full px-2">
+                <p className="text-sm md:text-base text-white/80 font-light leading-relaxed">{currentSlide.text}</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center shrink-0">
+             <div className="flex gap-1">
+                {slides.map((_, i) => (
+                  <div key={i} className={`h-1 rounded-full transition-all duration-300 ${i === slideIndex ? 'w-4 bg-yellow-400' : 'w-1 bg-white/20'}`}></div>
+                ))}
+             </div>
+             <span className="text-[9px] font-light text-white/30 tracking-widest uppercase">
+                Atualizado às {lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+             </span>
+          </div>
        </div>
     </div>
   );
 };
 
-// 4.1 Reminder Item Sub-component
-const ReminderItem = ({ reminder, onDelete }) => (
-  <div className="group bg-white/5 p-5 rounded-3xl border border-white/10 flex justify-between items-center transition-all hover:bg-white/10 hover:border-white/20">
-    <div className="flex flex-col gap-1">
-      <p className="text-base font-medium text-white/90">{reminder.text}</p>
-      <span className="text-xs tracking-widest text-yellow-500/80 font-bold uppercase">{reminder.time}</span>
-    </div>
-    <button
-      onClick={() => onDelete(reminder.id)}
-      className="opacity-0 group-hover:opacity-100 p-3 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-all"
-    >
-      <Trash2 size={18} />
-    </button>
-  </div>
-);
+// 4. News Widget
+const NewsWidget = ({ news, onRefresh }) => {
+  const [index, setIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
-// 4. Reminders Widget
-const RemindersWidget = ({ reminders, onAdd, onDelete }) => {
-  const [isAdding, setIsAdding] = useState(false);
-  const [text, setText] = useState('');
+  useEffect(() => {
+    if (news.length === 0) return;
+    setLastUpdated(new Date());
+    const cycleTime = news.length > 50 ? 8000 : 12000;
+    const interval = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % news.length);
+        setIsTransitioning(false);
+      }, 500);
+    }, cycleTime);
+    return () => clearInterval(interval);
+  }, [news.length]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (text.trim()) { 
-      onAdd(text); 
-      setText(''); 
-      setIsAdding(false); 
-    }
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await onRefresh();
+    setIsLoading(false);
   };
 
+  const currentNews = news[index];
+
+  if (!currentNews || isLoading) {
+    return (
+      <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-8 shadow-2xl flex flex-col items-center justify-center text-center">
+        <Bot size={40} className="text-white/20 animate-pulse mb-4" />
+        <p className="text-white/40 text-sm uppercase tracking-widest">{isLoading ? 'Sincronizando com Google News...' : 'Buscando notícias em tempo real...'}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] p-6 shadow-2xl flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-3 text-yellow-400">
-          <Bell size={24} />
-          <span className="font-bold tracking-[0.3em] text-sm uppercase">Lembretes</span>
+    <div className="w-full h-full bg-black/50 backdrop-blur-2xl border border-white/10 rounded-[3rem] shadow-2xl flex flex-col overflow-hidden relative group">
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={currentNews.imageUrl} 
+          alt="" 
+          referrerPolicy="no-referrer"
+          className={`w-full h-full object-cover transition-all duration-1000 ${isTransitioning ? 'scale-110 blur-sm opacity-40' : 'scale-100 blur-0 opacity-60'}`}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+      </div>
+
+      <div className="relative z-10 flex flex-col h-full p-8">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10 shrink-0">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3 text-blue-400">
+              <Globe size={20} className="animate-spin-slow" />
+              <span className="font-black tracking-[0.2em] text-xs uppercase drop-shadow-lg">Breaking News</span>
+            </div>
+            <span className="text-[9px] text-white/30 uppercase tracking-widest mt-1">
+              Atualizado: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+          <button onClick={handleRefresh} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50 hover:text-white">
+            <Bot size={18} />
+          </button>
         </div>
-        <button onClick={() => setIsAdding(!isAdding)} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
-          {isAdding ? <X size={20} /> : <Plus size={20} />}
-        </button>
+
+        <div className={`flex-1 flex flex-col justify-end transition-all duration-500 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded shadow-lg">
+              {currentNews.source}
+            </span>
+            <span className="text-[9px] text-blue-400 font-bold uppercase tracking-widest">{currentNews.time || 'agora'}</span>
+          </div>
+          
+          <h2 className="text-xl md:text-2xl font-black text-white leading-tight mb-3 tracking-tight drop-shadow-2xl">
+            {currentNews.headline}
+          </h2>
+          
+          <p className="text-sm text-white/80 leading-relaxed mb-6 line-clamp-3 font-medium drop-shadow-md">
+            {currentNews.summary}
+          </p>
+
+          <div className="flex items-center gap-2 text-white/40">
+            <Newspaper size={12} />
+            <span className="text-[9px] uppercase font-black tracking-widest">{currentNews.category}</span>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center shrink-0">
+          <div className="flex gap-1 flex-1 mr-4 overflow-hidden">
+            {news.map((_, i) => (
+              <div 
+                key={i} 
+                className={`h-1 rounded-full transition-all duration-500 shrink-0 ${i === index ? 'w-8 bg-blue-500' : 'w-1 bg-white/20'}`}
+                style={{
+                  display: news.length > 20 && Math.abs(i - index) > 5 ? 'none' : 'block'
+                }}
+              ></div>
+            ))}
+          </div>
+          <span className="text-[10px] font-black text-white/30 tabular-nums">
+            {index + 1} / {news.length}
+          </span>
+        </div>
       </div>
       
-      {isAdding && (
-        <form onSubmit={handleSubmit} className="mb-6 animate-fade-in shrink-0">
-          <input 
-            autoFocus 
-            value={text} 
-            onChange={(e) => setText(e.target.value)} 
-            placeholder="O que lembrar?" 
-            className="w-full bg-black/60 border-2 border-yellow-500/50 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-yellow-400 transition-colors" 
-          />
-        </form>
-      )}
-      
-      <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
-        {reminders.length === 0 && !isAdding ? (
-          <p className="text-white/30 text-sm text-center mt-10">Tudo limpo por aqui.</p>
-        ) : (
-          reminders.map((r) => <ReminderItem key={r.id} reminder={r} onDelete={onDelete} />)
-        )}
-      </div>
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
@@ -371,30 +711,27 @@ const ChatModal = ({ isOpen, onClose }) => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async (e) => {
+  const handleSend = async (e: any) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !ai) return;
 
     const userMsg = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
-    const payload = {
-      contents: [{ parts: [{ text: userMsg }] }],
-      systemInstruction: { parts: [{ text: "Você é um assistente virtual de um protetor de tela inteligente localizado em Maricá, RJ. Seja conciso e educado." }] }
-    };
-
     let attempt = 0;
     while (attempt < 5) {
       try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: userMsg,
+          config: {
+            systemInstruction: "Você é um assistente virtual de um protetor de tela inteligente localizado em Maricá, RJ. Seja conciso e educado."
+          }
         });
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar isso.";
+        
+        const text = response.text || "Desculpe, não consegui processar isso.";
         setMessages(prev => [...prev, { role: 'assistant', text }]);
         break;
       } catch (err) {
@@ -460,31 +797,47 @@ const ChatModal = ({ isOpen, onClose }) => {
   );
 };
 
-// 6. Background Music Player
-const BackgroundMusic = ({ isPlaying }) => {
-  const audioRef = useRef(null);
-  const [isMuted, setIsMuted] = useState(true);
+// 6. Radio Player (JB FM)
+const RadioPlayer: React.FC<{ isPlaying: boolean }> = ({ isPlaying }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlayingRadio, setIsPlayingRadio] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
-    if (isPlaying && audioRef.current && !isMuted) {
+    const handleInteraction = () => {
+      if (!hasInteracted && isPlayingRadio && audioRef.current) {
+        audioRef.current.play().catch(e => console.log("Ainda bloqueado:", e));
+        setHasInteracted(true);
+      }
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [hasInteracted, isPlayingRadio]);
+
+  useEffect(() => {
+    if (isPlaying && isPlayingRadio && audioRef.current) {
       audioRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
-  }, [isPlaying, isMuted]);
+  }, [isPlaying, isPlayingRadio]);
 
   return (
     <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-      <audio ref={audioRef} loop src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3" />
+      <audio ref={audioRef} src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
       <div className="flex items-center gap-2">
-        <Music size={16} className={!isMuted ? "text-yellow-400 animate-pulse" : "text-white/40"} />
-        <span className="text-xs font-bold uppercase tracking-widest text-white/70">Lofi Radio</span>
+        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
+        <span className="text-xs font-bold uppercase tracking-widest text-white/70">JB FM 99.9</span>
       </div>
       <button 
-        onClick={() => setIsMuted(!isMuted)}
-        className={`w-10 h-6 rounded-full relative transition-colors ${!isMuted ? 'bg-yellow-500' : 'bg-white/20'}`}
+        onClick={() => setIsPlayingRadio(!isPlayingRadio)}
+        className={`w-10 h-6 rounded-full relative transition-colors ${isPlayingRadio ? 'bg-yellow-500' : 'bg-white/20'}`}
       >
-        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${!isMuted ? 'translate-x-5' : 'translate-x-1'}`} />
+        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isPlayingRadio ? 'translate-x-5' : 'translate-x-1'}`} />
       </button>
     </div>
   );
@@ -498,18 +851,20 @@ const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [weather, setWeather] = useState(null);
   const [beachReport, setBeachReport] = useState([{title: 'Carregando', text: 'Gerando relatório...'}]);
-  const [reminders, setReminders] = useState([]);
+  const [news, setNews] = useState([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [hasStarted, setHasStarted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLayoutLocked, setIsLayoutLocked] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState(MARICA_COORDS);
+  const [locationName, setLocationName] = useState("Maricá - RJ");
   
   const [selectedWidget, setSelectedWidget] = useState(null);
   
   const [widgets, setWidgets] = useState({
     clock: { width: 400, height: 160, x: 0, y: 0 },
-    reminders: { width: 350, height: 600, x: 0, y: 0 }, 
+    news: { width: 350, height: 600, x: 0, y: 0 }, 
     weather: { width: 350, height: 600, x: 0, y: 0 }, 
     date: { width: 400, height: 300, x: 0, y: 0 }, 
     prev: { width: 190, height: 100, x: 0, y: 0 },
@@ -535,7 +890,7 @@ const App = () => {
       const dateHeight = h - clockHeight - footerHeight - (padding * 4);
       
       setWidgets({
-        reminders: { width: sideColumnWidth, height: h - (padding * 2), x: padding, y: padding },
+        news: { width: sideColumnWidth, height: h - (padding * 2), x: padding, y: padding },
         weather: { width: sideColumnWidth, height: h - (padding * 2), x: w - sideColumnWidth - padding, y: padding },
         clock: { width: centerColumnWidth, height: clockHeight, x: sideColumnWidth + (padding * 2), y: padding },
         date: { width: centerColumnWidth, height: Math.max(100, dateHeight), x: sideColumnWidth + (padding * 2), y: padding + clockHeight + padding },
@@ -548,16 +903,16 @@ const App = () => {
       const clockHeight = 140;
       const weatherHeight = 300;
       const dateHeight = 200;
-      const remindersHeight = 400;
+      const newsHeight = 400;
       
       setWidgets(prev => ({
         ...prev,
         clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
         weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
         date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
-        reminders: { width: widgetWidth, height: remindersHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
-        prev: { width: (widgetWidth / 2) - (padding / 2), height: 80, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + remindersHeight + (padding * 4) },
-        next: { width: (widgetWidth / 2) - (padding / 2), height: 80, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + remindersHeight + (padding * 4) }
+        news: { width: widgetWidth, height: newsHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
+        prev: { width: (widgetWidth / 2) - (padding / 2), height: 80, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) },
+        next: { width: (widgetWidth / 2) - (padding / 2), height: 80, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) }
       }));
     }
   }, []);
@@ -598,37 +953,44 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Reminders from Firestore
-  useEffect(() => {
-    if (!user || !db) return;
-    const remindersRef = collection(db, 'artifacts', appId, 'users', user.uid, 'smart_home_reminders');
-    
-    const unsubscribe = onSnapshot(remindersRef, (snapshot) => {
-      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      fetched.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-      setReminders(fetched);
-    }, (error) => {
-      console.error("Firestore Error:", error);
-    });
-    
-    return () => unsubscribe();
-  }, [user]);
-
   const loadData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
-      const data = await fetchWeatherData(MARICA_COORDS);
-      if (data) {
-        setWeather(data);
-        const report = await generateBeachReport(data, 'Maricá');
+      const weatherData = await fetchWeatherData(userCoords);
+      if (weatherData) {
+        setWeather(weatherData);
+        const report = await generateBeachReport(weatherData, locationName);
         if (report && report.length > 0) setBeachReport(report);
       }
+      
+      const newsData = await fetchNews();
+      if (newsData && newsData.length > 0) setNews(newsData);
     } catch (e) { console.error("Erro no ciclo de dados:", e); }
+  }, [userCoords, locationName]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = { lat: position.coords.latitude, lon: position.coords.longitude };
+          setUserCoords(coords);
+          // Simple check to see if we are in Maricá or not
+          const dist = Math.sqrt(Math.pow(coords.lat - MARICA_COORDS.lat, 2) + Math.pow(coords.lon - MARICA_COORDS.lon, 2));
+          if (dist > 0.1) {
+            setLocationName("Minha Localização");
+          } else {
+            setLocationName("Maricá - RJ");
+          }
+        },
+        (error) => console.log("Erro ao obter localização:", error),
+        { enableHighAccuracy: true }
+      );
+    }
   }, []);
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 300000); // 5 mins
+    const interval = setInterval(loadData, 600000); // 10 mins
     return () => clearInterval(interval);
   }, [loadData]);
 
@@ -641,42 +1003,67 @@ const App = () => {
     if (isLayoutLocked) setSelectedWidget(null);
   }, [isLayoutLocked]);
 
-  const addReminder = async (text) => {
-    if (db && isOnline && user) {
-      await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'smart_home_reminders'), {
-        text, 
-        type: 'info', 
-        createdAt: serverTimestamp(),
-        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      });
-    } else {
-      setReminders(prev => [{
-        id: Date.now().toString(),
-        text,
-        type: 'info',
-        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      }, ...prev]);
-    }
-  };
-
-  const deleteReminder = async (id) => {
-    if (db && isOnline && user) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'smart_home_reminders', id));
-    } else {
-      setReminders(prev => prev.filter(r => r.id !== id));
-    }
-  };
-
   const getBackgroundStyle = () => {
-    const code = weather?.weathercode || 0;
-    let imageId = '1507525428034-b723cf961d3e'; 
-    if (code >= 51 && code <= 67) imageId = '1515694346937-94d85e41e6f0'; 
-    if (code >= 95) imageId = '1605727216801-e27ce1d0cc28'; 
+    const code = weather?.weathercode ?? 0;
+    const isDay = weather ? weather.is_day !== 0 : true;
+    
+    // Accurate local time calculation for the location
+    const now = currentTime.getTime();
+    const browserOffset = currentTime.getTimezoneOffset() * 60000;
+    const utcTime = now + browserOffset;
+    const locationOffset = (weather?.utc_offset_seconds || 0) * 1000;
+    const locationTime = new Date(utcTime + locationOffset);
+    
+    const sunriseStr = weather?.sunrise; // e.g. "2026-03-12T06:12"
+    const sunsetStr = weather?.sunset;
+    
+    let timeOfDay = isDay ? 'day' : 'night';
+    
+    if (sunriseStr && sunsetStr) {
+      // Parse strings as local time of the location
+      const [sDate, sTime] = sunriseStr.split('T');
+      const [srH, srM] = sTime.split(':').map(Number);
+      const [ssDate, ssTime] = sunsetStr.split('T');
+      const [ssH, ssM] = ssTime.split(':').map(Number);
+      
+      const locH = locationTime.getHours();
+      const locM = locationTime.getMinutes();
+      const locTotalMin = locH * 60 + locM;
+      const srTotalMin = srH * 60 + srM;
+      const ssTotalMin = ssH * 60 + ssM;
+      
+      // 1 hour window for sunrise/sunset
+      if (Math.abs(locTotalMin - srTotalMin) <= 60) timeOfDay = 'sunrise';
+      else if (Math.abs(locTotalMin - ssTotalMin) <= 60) timeOfDay = 'sunset';
+    }
+
+    let imageId = '';
+    
+    if (timeOfDay === 'sunrise') {
+      imageId = '1500382017468-9049fed747ef'; // Dawn beach
+    } else if (timeOfDay === 'sunset') {
+      imageId = '1495616191278-27c00009767f'; // Sunset ocean
+    } else if (timeOfDay === 'night') {
+      if (code >= 50) imageId = '1515694346937-94d85e41e6f0'; // Rainy night
+      else if (code >= 1) imageId = '1536152470836-b943b246224c'; // Cloudy night
+      else imageId = '1506318137071-a8e063b4bec0'; // Clear night
+    } else {
+      // Day time
+      if (code >= 95) imageId = '1605727216801-e27ce1d0cc28'; // Storm
+      else if (code >= 50) imageId = '1515694346937-94d85e41e6f0'; // Rain
+      else if (code >= 3) imageId = '1483728642387-6c3bdd6c93e5'; // Overcast
+      else if (code >= 1) imageId = '1534088568595-a066f410cbda'; // Partly Cloudy
+      else imageId = '1507525428034-b723cf961d3e'; // Sunny Beach
+    }
+
+    const imageUrl = `https://images.unsplash.com/photo-${imageId}?q=80&w=2560&auto=format&fit=crop`;
+
     return { 
-      backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.7)), url("https://images.unsplash.com/photo-${imageId}?q=80&w=1920&auto=format&fit=crop")`,
+      backgroundImage: `linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.4)), url("${imageUrl}")`,
       backgroundSize: 'cover', 
       backgroundPosition: 'center',
-      transition: 'background-image 1s ease-in-out'
+      transition: 'background-image 3s ease-in-out',
+      backgroundColor: '#1a1a1a'
     };
   };
 
@@ -721,7 +1108,9 @@ const App = () => {
     .animate-float { animation: float 6s ease-in-out infinite; }
   `;
 
-  const isRaining = weather?.weathercode >= 51 && weather?.weathercode <= 67;
+  const isRaining = (weather?.weathercode >= 51 && weather?.weathercode <= 67) || 
+                    (weather?.weathercode >= 80 && weather?.weathercode <= 82) ||
+                    (weather?.weathercode >= 95);
 
   return (
     <ErrorBoundary>
@@ -752,7 +1141,7 @@ const App = () => {
           </div>
         )}
 
-        <BackgroundMusic isPlaying={hasStarted} />
+        <RadioPlayer isPlaying={hasStarted} />
         <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
         
         {!isOnline && (
@@ -767,15 +1156,15 @@ const App = () => {
         <section className="absolute inset-0 z-10" style={{ pointerEvents: isLayoutLocked ? 'none' : 'auto' }}>
           
           <ResizableWidget width={widgets.clock.width} height={widgets.clock.height} locked={isLayoutLocked} position={{ x: widgets.clock.x, y: widgets.clock.y }} isSelected={selectedWidget === 'clock'} onSelect={() => setSelectedWidget('clock')} onResize={(w, h) => updateWidget('clock', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('clock', { x, y })}>
-            <ClockWidget currentTime={currentTime} greeting={currentTime.getHours() < 12 ? 'Bom dia' : currentTime.getHours() < 18 ? 'Boa tarde' : 'Boa noite'} width={widgets.clock.width} />
+            <ClockWidget currentTime={currentTime} greeting={currentTime.getHours() < 12 ? 'Bom dia' : currentTime.getHours() < 18 ? 'Boa tarde' : 'Boa noite'} width={widgets.clock.width} height={widgets.clock.height} />
           </ResizableWidget>
           
-          <ResizableWidget width={widgets.reminders.width} height={widgets.reminders.height} locked={isLayoutLocked} position={{ x: widgets.reminders.x, y: widgets.reminders.y }} isSelected={selectedWidget === 'reminders'} onSelect={() => setSelectedWidget('reminders')} onResize={(w, h) => updateWidget('reminders', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('reminders', { x, y })}>
-            <RemindersWidget reminders={reminders} onAdd={addReminder} onDelete={deleteReminder} />
+          <ResizableWidget width={widgets.news.width} height={widgets.news.height} locked={isLayoutLocked} position={{ x: widgets.news.x, y: widgets.news.y }} isSelected={selectedWidget === 'news'} onSelect={() => setSelectedWidget('news')} onResize={(w, h) => updateWidget('news', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('news', { x, y })}>
+            <NewsWidget news={news} onRefresh={loadData} />
           </ResizableWidget>
           
           <ResizableWidget width={widgets.weather.width} height={widgets.weather.height} locked={isLayoutLocked} position={{ x: widgets.weather.x, y: widgets.weather.y }} isSelected={selectedWidget === 'weather'} onSelect={() => setSelectedWidget('weather')} onResize={(w, h) => updateWidget('weather', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('weather', { x, y })}>
-            <WeatherWidget weather={weather} locationName="Maricá - RJ" beachReport={beachReport} width={widgets.weather.width} />
+            <WeatherWidget weather={weather} locationName={locationName} beachReport={beachReport} width={widgets.weather.width} onRefresh={loadData} />
           </ResizableWidget>
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>

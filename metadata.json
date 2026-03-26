@@ -1,5 +1,7 @@
 {
-  "name": "PROTETOR DE TELA INTELIGENTE",
+  "name": "🧑‍💻​PROTETOR DE TELA INTELIGENTE🧑‍💻​",
   "description": "Um protetor de tela inteligente com clima, relógio, lembretes e assistente de IA.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
