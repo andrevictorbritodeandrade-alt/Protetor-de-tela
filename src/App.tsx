@@ -146,7 +146,30 @@ const generateBeachReport = async (weatherData: any, location: string) => {
 };
 
 const fetchNews = async () => {
-  if (!ai) return [];
+  const fallbackNews = [
+    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
+    { source: "Bahia Notícias", headline: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
+    { source: "G1 Política", headline: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
+    { source: "TechCrunch", headline: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
+    { source: "CNN Brasil", headline: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ1/800/600", time: "20 min" },
+    { source: "UOL Esporte", headline: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo2/800/600", time: "22 min" },
+    { source: "Folha", headline: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia2/800/600", time: "25 min" },
+    { source: "The Verge", headline: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech2/800/600", time: "30 min" },
+    { source: "Estadão", headline: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ2/800/600", time: "35 min" },
+    { source: "BBC Brasil", headline: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia1/800/600", time: "40 min" },
+    { source: "Globo.com", headline: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo3/800/600", time: "45 min" },
+    { source: "Bahia Notícias", headline: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia3/800/600", time: "50 min" },
+    { source: "Reuters", headline: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
+    { source: "Wired", headline: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
+    { source: "Exame", headline: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
+    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
+    { source: "Bahia Notícias", headline: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
+    { source: "Gizmodo", headline: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
+    { source: "Valor Econômico", headline: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
+    { source: "O Globo", headline: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
+  ];
+
+  if (!ai) return fallbackNews;
   
   const topics = [
     "Política Brasil e Mundo (Últimos 15 min)",
@@ -226,29 +249,7 @@ const fetchNews = async () => {
     return allNews.slice(0, 20);
   }
 
-  // Fallback robusto com 20 itens caso a API falhe (Atualizado para Março de 2026)
-  return [
-    { source: "Globo Esporte", headline: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo1/800/600", time: "5 min" },
-    { source: "Bahia Notícias", headline: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia1/800/600", time: "8 min" },
-    { source: "G1 Política", headline: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://picsum.photos/seed/politica1/800/600", time: "12 min" },
-    { source: "TechCrunch", headline: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech1/800/600", time: "15 min" },
-    { source: "CNN Brasil", headline: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ1/800/600", time: "20 min" },
-    { source: "UOL Esporte", headline: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo2/800/600", time: "22 min" },
-    { source: "Folha", headline: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia2/800/600", time: "25 min" },
-    { source: "The Verge", headline: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech2/800/600", time: "30 min" },
-    { source: "Estadão", headline: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ2/800/600", time: "35 min" },
-    { source: "BBC Brasil", headline: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia1/800/600", time: "40 min" },
-    { source: "Globo.com", headline: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo3/800/600", time: "45 min" },
-    { source: "Bahia Notícias", headline: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia3/800/600", time: "50 min" },
-    { source: "Reuters", headline: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://picsum.photos/seed/mundo1/800/600", time: "55 min" },
-    { source: "Wired", headline: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia2/800/600", time: "1h" },
-    { source: "Exame", headline: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ3/800/600", time: "1h 5min" },
-    { source: "Globo Esporte", headline: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://picsum.photos/seed/flamengo4/800/600", time: "1h 10min" },
-    { source: "Bahia Notícias", headline: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://picsum.photos/seed/bahia4/800/600", time: "1h 15min" },
-    { source: "Gizmodo", headline: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://picsum.photos/seed/ciencia3/800/600", time: "1h 20min" },
-    { source: "Valor Econômico", headline: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://picsum.photos/seed/econ4/800/600", time: "1h 25min" },
-    { source: "O Globo", headline: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
-  ];
+  return fallbackNews;
 };
 
 // --- COMPONENTS ---
@@ -633,10 +634,17 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
 
   // Busca de Notícias (Gemini + Google Search)
   const fetchNewsInternal = async () => {
-    if (!ai) return;
     setLoading(true);
     setError(null);
     setNewsImages({}); 
+    
+    if (!ai) {
+      // Use global fetchNews which has fallback
+      const fallback = await fetchNews();
+      setNews(fallback);
+      setLoading(false);
+      return;
+    }
     
     try {
       const now = "2026-03-15"; // Hardcoded to March 15, 2026
