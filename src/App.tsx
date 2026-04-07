@@ -179,78 +179,35 @@ const fetchNews = async () => {
     { source: "O Globo", title: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://picsum.photos/seed/tech3/800/600", time: "1h 30min" }
   ];
 
-  if (!ai) return fallbackNews;
+  const gnewsKey = "17131cf0e473ce9cc82abe33401229898a";
+  const url = `https://gnews.io/api/v4/top-headlines?category=general&lang=pt&country=br&max=50&apikey=${gnewsKey}`;
   
-  const fetchBatch = async (sources: string, count: number) => {
-    const now = new Date().toISOString();
-    const prompt = `Aja como um agregador de notícias ultra-rápido. 
-    DATA E HORA ATUAL: ${now}. 
-    Sua missão é buscar as ${count} notícias mais RECENTES (dos últimos minutos/horas de HOJE) EXCLUSIVAMENTE nestes sites: ${sources}.
-    É OBRIGATÓRIO extrair a URL REAL DA IMAGEM DE CAPA (thumbnail) original usada na matéria do site. Não invente URLs.
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
     
-    Retorne APENAS um array JSON no formato exato:
-    [{"source": "Nome do Site (ex: UOL, O Globo)", "title": "Título da matéria", "summary": "Resumo do texto da notícia em 2 frases", "category": "Tema", "imageUrl": "URL_REAL_DA_IMAGEM_DA_MATERIA", "time": "há X min"}]
-    Não use Markdown. Apenas o JSON puro.`;
+    if (data.articles && data.articles.length > 0) {
+      const mappedNews = data.articles.map((article: any) => ({
+        source: article.source.name,
+        title: article.title,
+        summary: article.description || article.content || article.title,
+        category: "GNews",
+        imageUrl: article.image || `https://picsum.photos/seed/${encodeURIComponent(article.title)}/800/600`,
+        time: new Date(article.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      }));
 
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-          systemInstruction: "Você é um agregador de notícias de elite. Prioridade máxima: FRESCO (Breaking News). Extraia a imagem original da matéria. O técnico do Flamengo é Leonardo Jardim."
-        }
-      });
-      
-      if (response.text) {
-        const news = cleanAndParseJSON(response.text);
-        return news || [];
+      // Ensure 50 items
+      let finalNews = [...mappedNews];
+      while (finalNews.length < 50 && finalNews.length > 0) {
+        finalNews = [...finalNews, ...mappedNews].slice(0, 50);
       }
-    } catch (error) {
-      console.error("Erro na busca de notícias (Batch):", error);
+      return finalNews;
     }
-    return [];
-  };
-
-  const cleanAndParseJSON = (text: string) => {
-    try {
-      const start = text.indexOf('[');
-      const end = text.lastIndexOf(']');
-      if (start !== -1 && end !== -1) {
-        const jsonStr = text.substring(start, end + 1);
-        const parsed = JSON.parse(jsonStr);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((item: any) => ({
-            ...item,
-            imageUrl: item.imageUrl && item.imageUrl.startsWith('http') ? item.imageUrl : `https://picsum.photos/seed/${encodeURIComponent(item.title || item.headline)}/800/600`,
-            summary: item.summary || item.title || item.headline,
-            title: item.title || item.headline
-          }));
-        }
-      }
-    } catch (e) {
-      console.error("Erro ao processar JSON de notícias:", e);
-    }
-    return null;
-  };
-
-  const [batch1, batch2] = await Promise.all([
-    fetchBatch("UOL, O Globo, G1", 25),
-    fetchBatch("Daily Mail, The New York Times, BBC, CNN, Reuters", 25)
-  ]);
-  
-  const allNews = [...batch1, ...batch2];
-
-  if (allNews.length > 0) {
-    // Fill up to 50 if we got fewer, by duplicating some to ensure the carousel is full
-    let finalNews = [...allNews];
-    while (finalNews.length < 50 && finalNews.length > 0) {
-      finalNews = [...finalNews, ...allNews].slice(0, 50);
-    }
-    return finalNews;
+  } catch (error) {
+    console.error("Erro ao buscar notícias no GNews:", error);
   }
 
-  // Fallback se tudo falhar, retorna o array de fallback duplicado para chegar a 50
+  // Fallback se tudo falhar
   let finalFallback = [...fallbackNews];
   while (finalFallback.length < 50) {
     finalFallback = [...finalFallback, ...fallbackNews].slice(0, 50);
@@ -468,7 +425,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   const nextHours = weather.hourly?.time?.slice(currentHourIndex, currentHourIndex + 24) || [];
   
   return (
-    <div className={`animate-float flex flex-col w-full h-full bg-gradient-to-b from-[#4A90E2] to-[#5C9CE6] rounded-[3rem] shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] opacity-90' : 'scale-100'}`}>
+    <div className={`animate-float flex flex-col w-full h-full bg-black/40 backdrop-blur-md border border-white/5 rounded-[3rem] shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] opacity-90' : 'scale-100'}`}>
       
       {/* Header */}
       <div className="flex justify-between items-center p-6 pb-2 shrink-0 z-10">
@@ -875,7 +832,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
     if (news.length === 0) {
       fetchNewsInternal();
     }
-    const interval = setInterval(fetchNewsInternal, 20 * 60 * 1000);
+    const interval = setInterval(fetchNewsInternal, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -884,7 +841,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
     const rotate = setInterval(() => {
       setAnalysis(null);
       setCurrentIdx((prev) => (prev + 1) % news.length);
-    }, 15000);
+    }, 10000);
     return () => clearInterval(rotate);
   }, [news, isAnalyzing, isSpeaking]);
 
