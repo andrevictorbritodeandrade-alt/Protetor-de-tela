@@ -180,28 +180,40 @@ const fetchNews = async () => {
   ];
 
   const gnewsKey = "17131cf0e473ce9cc82abe33401229898a";
-  const url = `https://gnews.io/api/v4/top-headlines?category=general&lang=pt&country=br&max=50&apikey=${gnewsKey}`;
+  
+  // Obter data de hoje (00:00:00 até 23:59:59)
+  const now = new Date();
+  const dateString = now.toISOString().split('T')[0];
+  const fromDate = `${dateString}T00:00:00Z`;
+  const toDate = `${dateString}T23:59:59Z`;
+  
+  const query = encodeURIComponent('esporte OR esportes OR política OR tecnologia');
+  const url = `https://gnews.io/api/v4/search?q=${query}&lang=pt&country=br&max=50&from=${fromDate}&to=${toDate}&sortby=publishedAt&apikey=${gnewsKey}`;
   
   try {
     const response = await fetch(url);
     const data = await response.json();
     
     if (data.articles && data.articles.length > 0) {
-      const mappedNews = data.articles.map((article: any) => ({
-        source: article.source.name,
-        title: article.title,
-        summary: article.description || article.content || article.title,
-        category: "GNews",
-        imageUrl: article.image || `https://picsum.photos/seed/${encodeURIComponent(article.title)}/800/600`,
-        time: new Date(article.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-      }));
+      const mappedNews = data.articles
+        .filter((article: any) => article.image) // Apenas notícias com imagem real
+        .map((article: any) => ({
+          source: article.source.name,
+          title: article.title,
+          summary: article.description || article.content || article.title,
+          category: "GNews",
+          imageUrl: article.image,
+          time: new Date(article.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        }));
 
-      // Ensure 50 items
-      let finalNews = [...mappedNews];
-      while (finalNews.length < 50 && finalNews.length > 0) {
-        finalNews = [...finalNews, ...mappedNews].slice(0, 50);
+      if (mappedNews.length > 0) {
+        // Ensure 50 items
+        let finalNews = [...mappedNews];
+        while (finalNews.length < 50 && finalNews.length > 0) {
+          finalNews = [...finalNews, ...mappedNews].slice(0, 50);
+        }
+        return finalNews;
       }
-      return finalNews;
     }
   } catch (error) {
     console.error("Erro ao buscar notícias no GNews:", error);
