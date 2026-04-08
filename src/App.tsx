@@ -5,7 +5,7 @@ import {
   WifiOff, Trash2, Plus, MessageCircle, X, Cloud, Sun, Moon, CloudRain, 
   CloudLightning, Wind, Droplets, Thermometer, Music, Bot, Send,
   GripHorizontal, Bell, Waves, MapPin, ThermometerSun, ArrowUp, ArrowDown, ThumbsUp, Skull,
-  AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe,
+  AlertTriangle, Info, CheckCircle, Navigation, Clock, Newspaper, Globe, Cpu,
   TrendingUp, AlertCircle, RefreshCcw, Sparkles, Volume2, Image as ImageIcon, Loader2, Download,
   Menu, ArrowUpRight, Activity, Eye, AlarmClock, History, Calendar
 } from 'lucide-react';
@@ -411,19 +411,19 @@ const ClockWidget = ({ currentTime, greeting, width = 300, height = 150 }) => {
     <div className="flex flex-col items-center justify-center h-full w-full px-2 animate-fade-in drop-shadow-lg bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5 overflow-hidden">
       <div 
         className="font-light tracking-wide opacity-80 uppercase text-yellow-400 leading-none mb-2 text-center" 
-        style={{ fontSize: `${Math.max(greetingSize, 10)}px` }}
+        style={{ fontSize: `${Math.max(greetingSize, 16)}px` }}
       >
         {greeting}
       </div>
       <div 
         className="font-bold tracking-tighter text-white leading-none text-center" 
-        style={{ fontSize: `${Math.max(timeSize, 32)}px` }}
+        style={{ fontSize: `${Math.max(timeSize, 48)}px` }}
       >
         {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </div>
       <div 
         className="opacity-50 uppercase tracking-[0.2em] mt-2 text-white text-center" 
-        style={{ fontSize: `${Math.max(locationSize, 9)}px` }}
+        style={{ fontSize: `${Math.max(locationSize, 14)}px` }}
       >
         Maricá - RJ
       </div>
@@ -533,7 +533,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end pb-4">
-        <p className="text-white font-medium mb-6 text-base">
+        <p className="text-white font-medium mb-6 text-lg">
           {getConditionText(weather.weathercode)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
         </p>
         <div className="flex overflow-x-auto no-scrollbar gap-8 pb-4 relative">
@@ -569,12 +569,12 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             const date = new Date(timeStr);
             return (
               <div key={i} className="flex flex-col items-center min-w-[40px] text-white z-10">
-                <span className="text-sm mb-2">{i === 0 ? 'Agora' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                <span className="text-2xl mb-2">{getWeatherIcon(hCode)}</span>
-                <span className="text-lg font-medium mb-6">{hTemp}°</span>
+                <span className="text-base mb-2">{i === 0 ? 'Agora' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="text-3xl mb-2">{getWeatherIcon(hCode)}</span>
+                <span className="text-xl font-medium mb-6">{hTemp}°</span>
                 {hPrecip > 0 ? (
-                  <div className="flex items-center gap-1 text-blue-200 text-xs mt-auto">
-                    <Droplets size={10} />
+                  <div className="flex items-center gap-1 text-blue-200 text-sm mt-auto">
+                    <Droplets size={12} />
                     <span>{hPrecip}%</span>
                   </div>
                 ) : (
@@ -603,17 +603,17 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             
             return (
               <div key={i} className="flex items-center justify-between text-white">
-                <span className="w-28 text-base font-medium capitalize">{getDayName(dateStr, i)}</span>
-                <div className="flex items-center gap-1 w-16 text-blue-200 text-xs">
+                <span className="w-32 text-lg font-medium capitalize">{getDayName(dateStr, i)}</span>
+                <div className="flex items-center gap-1 w-20 text-blue-200 text-sm">
                   {dPrecip > 0 && (
                     <>
-                      <Droplets size={12} />
+                      <Droplets size={14} />
                       <span>{dPrecip}%</span>
                     </>
                   )}
                 </div>
-                <span className="text-2xl w-10 text-center">{getWeatherIcon(dCode)}</span>
-                <div className="flex justify-end gap-3 w-20 text-base font-medium">
+                <span className="text-3xl w-12 text-center">{getWeatherIcon(dCode)}</span>
+                <div className="flex justify-end gap-3 w-24 text-lg font-medium">
                   <span>{Math.round(dMax)}°</span>
                   <span className="text-white/60">{Math.round(dMin)}°</span>
                 </div>
@@ -625,10 +625,10 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
 
       <div className="flex flex-col">
         <div className="flex items-center gap-2 text-white/80 mb-2">
-          <Sun size={16} />
-          <span className="text-sm font-medium">Índice UV</span>
+          <Sun size={20} />
+          <span className="text-base font-medium">Índice UV</span>
         </div>
-        <p className="text-white text-sm mb-4">
+        <p className="text-white text-base mb-4">
           Os raios UV estão {getUvText(weather.uv_index).toLowerCase()}s.
         </p>
         <div className="flex items-center gap-4">
@@ -643,9 +643,9 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     // Page 2: Air Quality & Marine & Basic Metrics
     <div key="page2" className="flex flex-col h-full gap-6">
       <div className="flex flex-col items-center">
-        <span className="text-white/80 text-xs font-medium uppercase tracking-wider mb-1">Qualidade do Ar</span>
-        <span className="text-white text-lg font-bold mb-3">{getAqiText(weather.aqi)} ({weather.aqi})</span>
-        <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden flex">
+        <span className="text-white/80 text-sm font-medium uppercase tracking-wider mb-1">Qualidade do Ar</span>
+        <span className="text-white text-xl font-bold mb-3">{getAqiText(weather.aqi)} ({weather.aqi})</span>
+        <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden flex">
           <div className="h-full bg-green-400" style={{ width: '20%' }}></div>
           <div className="h-full bg-yellow-400" style={{ width: '40%' }}></div>
           <div className="h-full bg-orange-400" style={{ width: '20%' }}></div>
@@ -656,45 +656,45 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         <div className="flex flex-col">
           <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Droplets size={14} />
-            <span className="text-xs font-medium">Umidade</span>
+            <Droplets size={18} />
+            <span className="text-sm font-medium">Umidade</span>
           </div>
-          <span className="text-white text-xl font-bold">{weather.relative_humidity}%</span>
+          <span className="text-white text-2xl font-bold">{weather.relative_humidity}%</span>
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Wind size={14} />
-            <span className="text-xs font-medium">Vento</span>
+            <Wind size={18} />
+            <span className="text-sm font-medium">Vento</span>
           </div>
-          <span className="text-white text-xl font-bold">{weather.wind_speed} km/h</span>
+          <span className="text-white text-2xl font-bold">{weather.wind_speed} km/h</span>
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Waves size={14} />
-            <span className="text-xs font-medium">Ondas</span>
+            <Waves size={18} />
+            <span className="text-sm font-medium">Ondas</span>
           </div>
-          <span className="text-white text-xl font-bold">{weather.wave_height}m</span>
+          <span className="text-white text-2xl font-bold">{weather.wave_height}m</span>
         </div>
         <div className="flex flex-col">
           <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Thermometer size={14} />
-            <span className="text-xs font-medium">Água</span>
+            <Thermometer size={18} />
+            <span className="text-sm font-medium">Água</span>
           </div>
-          <span className="text-white text-xl font-bold">{weather.water_temp}°</span>
+          <span className="text-white text-2xl font-bold">{weather.water_temp}°</span>
         </div>
       </div>
 
       <div className="flex justify-between items-center text-white mt-auto">
         <div className="flex flex-col">
-          <span className="text-xs font-medium text-white/80 uppercase">Nascer</span>
-          <span className="text-lg font-bold">{new Date(weather.sunrise).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-sm font-medium text-white/80 uppercase">Nascer</span>
+          <span className="text-xl font-bold">{new Date(weather.sunrise).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-xs font-medium text-white/80 uppercase">Pôr do Sol</span>
-          <span className="text-lg font-bold">{new Date(weather.sunset).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-sm font-medium text-white/80 uppercase">Pôr do Sol</span>
+          <span className="text-xl font-bold">{new Date(weather.sunset).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
     </div>,
@@ -702,72 +702,72 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     // Page 3: Advanced Technical Metrics
     <div key="page3" className="flex flex-col h-full">
       <div className="flex flex-col">
-        <h3 className="text-yellow-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-          <Activity size={12} /> Dados Técnicos Avançados
+        <h3 className="text-yellow-400 text-sm font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+          <Activity size={16} /> Dados Técnicos Avançados
         </h3>
         
         <div className="grid grid-cols-2 gap-y-6 gap-x-8">
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Cobertura de Nuvens</span>
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Cobertura de Nuvens</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-mono text-white">{weather.cloud_cover}%</span>
-              <span className="text-[8px] text-white/30 font-medium">Total</span>
+              <span className="text-xl font-mono text-white">{weather.cloud_cover}%</span>
+              <span className="text-[10px] text-white/30 font-medium">Total</span>
             </div>
             <div className="flex gap-2 mt-1">
               <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Baixa</span>
-                <span className="text-[10px] font-mono text-white/70">{weather.cloud_low}%</span>
+                <span className="text-[9px] text-white/30 uppercase">Baixa</span>
+                <span className="text-xs font-mono text-white/70">{weather.cloud_low}%</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Média</span>
-                <span className="text-[10px] font-mono text-white/70">{weather.cloud_mid}%</span>
+                <span className="text-[9px] text-white/30 uppercase">Média</span>
+                <span className="text-xs font-mono text-white/70">{weather.cloud_mid}%</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Alta</span>
-                <span className="text-[10px] font-mono text-white/70">{weather.cloud_high}%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Rajadas de Vento</span>
-            <span className="text-lg font-mono text-white">{weather.wind_gusts} <small className="text-[10px] opacity-50">km/h</small></span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Solo (Superfície)</span>
-            <div className="flex items-baseline gap-3">
-              <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Temp</span>
-                <span className="text-lg font-mono text-white">{weather.soil_temp}°</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Umidade</span>
-                <span className="text-lg font-mono text-white">{weather.soil_moisture}</span>
+                <span className="text-[9px] text-white/30 uppercase">Alta</span>
+                <span className="text-xs font-mono text-white/70">{weather.cloud_high}%</span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Radiação Solar</span>
-            <span className="text-lg font-mono text-white">{weather.shortwave_radiation_sum} <small className="text-[10px] opacity-50">MJ/m²</small></span>
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Rajadas de Vento</span>
+            <span className="text-xl font-mono text-white">{weather.wind_gusts} <small className="text-xs opacity-50">km/h</small></span>
           </div>
 
           <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Evapotranspiração</span>
-            <span className="text-lg font-mono text-white">{weather.evapotranspiration} <small className="text-[10px] opacity-50">mm</small></span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-[9px] text-white/40 font-bold uppercase tracking-wider">Luz Solar</span>
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Solo (Superfície)</span>
             <div className="flex items-baseline gap-3">
               <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Dia</span>
-                <span className="text-lg font-mono text-white">{(weather.daylight_duration / 3600).toFixed(1)}h</span>
+                <span className="text-[9px] text-white/30 uppercase">Temp</span>
+                <span className="text-xl font-mono text-white">{weather.soil_temp}°</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[7px] text-white/30 uppercase">Sol</span>
-                <span className="text-lg font-mono text-white">{(weather.sunshine_duration / 3600).toFixed(1)}h</span>
+                <span className="text-[9px] text-white/30 uppercase">Umidade</span>
+                <span className="text-xl font-mono text-white">{weather.soil_moisture}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Radiação Solar</span>
+            <span className="text-xl font-mono text-white">{weather.shortwave_radiation_sum} <small className="text-xs opacity-50">MJ/m²</small></span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Evapotranspiração</span>
+            <span className="text-xl font-mono text-white">{weather.evapotranspiration} <small className="text-xs opacity-50">mm</small></span>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Luz Solar</span>
+            <div className="flex items-baseline gap-3">
+              <div className="flex flex-col">
+                <span className="text-[9px] text-white/30 uppercase">Dia</span>
+                <span className="text-xl font-mono text-white">{(weather.daylight_duration / 3600).toFixed(1)}h</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-white/30 uppercase">Sol</span>
+                <span className="text-xl font-mono text-white">{(weather.sunshine_duration / 3600).toFixed(1)}h</span>
               </div>
             </div>
           </div>
@@ -851,7 +851,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
       </div>
 
       {/* Footer Info */}
-      <div className="px-6 pb-4 flex justify-between items-center text-white/30 text-[10px] uppercase tracking-widest">
+      <div className="px-6 pb-4 flex justify-between items-center text-white/30 text-xs uppercase tracking-widest">
         <span>Open-Meteo API</span>
         <span>{lastUpdated.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
@@ -1043,9 +1043,9 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-red-600 text-white font-black px-2 py-0.5 italic text-[10px] rounded">LIVE NEWS 24/7</div>
-            <div className="hidden sm:flex items-center gap-2 text-white/40 text-[8px] font-bold uppercase tracking-widest">
-              <Globe size={12} className="animate-pulse" /> Global Signal
+            <div className="bg-yellow-600 text-black font-black px-2 py-0.5 italic text-xs rounded">SMART DISPLAY 24/7</div>
+            <div className="hidden sm:flex items-center gap-2 text-white/40 text-xs font-bold uppercase tracking-widest">
+              <Sparkles size={14} className="animate-pulse" /> AI Assistant
             </div>
           </div>
           <button onClick={() => { onRefresh?.(); fetchNewsInternal(); }} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50">
@@ -1057,41 +1057,41 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         {currentNews && (
           <div className="flex-1 flex flex-col justify-end">
             <div className="flex items-center gap-2 mb-2">
-              <span className="bg-blue-600/80 text-[8px] font-black uppercase px-2 py-0.5 rounded">{currentNews.category}</span>
+              <span className="bg-blue-600/80 text-xs font-black uppercase px-2 py-0.5 rounded">{currentNews.category}</span>
               {currentNews.isBreaking && (
-                <span className="bg-red-600 animate-pulse text-[8px] font-black uppercase px-2 py-0.5 rounded">Urgente</span>
+                <span className="bg-yellow-600 animate-pulse text-xs font-black uppercase px-2 py-0.5 rounded text-black">Destaque</span>
               )}
             </div>
 
-            <h2 className="text-lg md:text-xl font-black text-white leading-tight mb-2 tracking-tight line-clamp-2 uppercase italic">
+            <h2 className="text-xl md:text-2xl font-black text-white leading-tight mb-2 tracking-tight line-clamp-2 uppercase italic">
               {currentNews.title}
             </h2>
 
             {analysis ? (
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-xl mb-3 relative animate-in fade-in slide-in-from-bottom-2">
                 <button onClick={() => setAnalysis(null)} className="absolute top-2 right-2 text-white/30 hover:text-white"><X size={14}/></button>
-                <div className="text-purple-400 text-[8px] font-bold uppercase mb-1 flex items-center gap-1">
-                  <Sparkles size={10} /> Análise IA
+                <div className="text-yellow-400 text-xs font-bold uppercase mb-1 flex items-center gap-1">
+                  <Sparkles size={12} /> Análise IA
                 </div>
-                <p className="text-[10px] text-slate-200 font-light leading-relaxed line-clamp-3">{analysis}</p>
+                <p className="text-sm text-slate-200 font-light leading-relaxed line-clamp-3">{analysis}</p>
               </div>
             ) : (
-              <p className="text-xs text-slate-400 font-light mb-4 italic leading-relaxed line-clamp-2">
+              <p className="text-sm text-slate-400 font-light mb-4 italic leading-relaxed line-clamp-2">
                 "{currentNews.summary}"
               </p>
             )}
 
             <div className="flex gap-2 mb-4">
-              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-purple-700/60 hover:bg-purple-600 backdrop-blur-md text-[8px] font-black uppercase py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
-                {isAnalyzing ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Contexto
+              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-yellow-700/60 hover:bg-yellow-600 backdrop-blur-md text-xs font-black uppercase py-3 rounded-lg flex items-center justify-center gap-1.5 transition-all text-white">
+                {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Contexto
               </button>
-              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/60 hover:bg-emerald-600 backdrop-blur-md text-[8px] font-black uppercase py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all">
-                {isSpeaking ? <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" /> : <Volume2 size={10} />} Ouvir
+              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/60 hover:bg-emerald-600 backdrop-blur-md text-xs font-black uppercase py-3 rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                {isSpeaking ? <div className="w-2 h-2 bg-white rounded-full animate-ping" /> : <Volume2 size={14} />} Ouvir
               </button>
             </div>
 
-            <div className="flex items-center gap-3 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
-              <Newspaper size={12} className="text-red-600" />
+            <div className="flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
+              <Cpu size={14} className="text-yellow-600" />
               <span className="truncate">FONTE: {currentNews.source}</span>
               <div className="h-px flex-grow bg-white/10" />
               <span className="shrink-0">{currentIdx + 1} / {news.length}</span>
@@ -1101,10 +1101,10 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
 
         {/* Footer Ticker */}
         <div className="mt-4 pt-3 border-t border-white/10 flex items-center overflow-hidden shrink-0">
-          <div className="whitespace-nowrap animate-ticker flex items-center gap-8 font-bold text-[9px] text-white/30 uppercase">
+          <div className="whitespace-nowrap animate-ticker flex items-center gap-8 font-bold text-xs text-white/30 uppercase">
             {news.length > 0 ? [...news, ...news].map((item, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-red-700 font-black">•</span>
+                <span className="text-yellow-600 font-black">•</span>
                 <span>{item.title}</span>
               </div>
             )) : <span className="opacity-50">Sintonizando feed global...</span>}
@@ -1278,8 +1278,8 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlayi
     <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
       <audio ref={audioRef} src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
       <div className="flex items-center gap-2">
-        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
-        <span className="text-xs font-bold uppercase tracking-widest text-white/70">JB FM 99.9</span>
+        <Music size={18} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
+        <span className="text-sm font-bold uppercase tracking-widest text-white/70">JB FM 99.9</span>
       </div>
       <button 
         onClick={() => setIsPlayingRadio(!isPlayingRadio)}
@@ -1334,40 +1334,40 @@ const QuickSettings = ({ brightness, setBrightness, volume, setVolume, alarms, s
 
           <div className="space-y-6">
             <div className="space-y-3">
-              <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-white/50">
-                <div className="flex items-center gap-2"><Sun size={14} /> Brilho</div>
+              <div className="flex justify-between text-sm font-bold uppercase tracking-widest text-white/50">
+                <div className="flex items-center gap-2"><Sun size={18} /> Brilho</div>
                 <span>{Math.round(brightness * 100)}%</span>
               </div>
               <input 
                 type="range" min="0.1" max="1" step="0.01" 
                 value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
+                className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
               />
             </div>
 
             <div className="space-y-3">
-              <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-white/50">
-                <div className="flex items-center gap-2"><Volume2 size={14} /> Volume</div>
+              <div className="flex justify-between text-sm font-bold uppercase tracking-widest text-white/50">
+                <div className="flex items-center gap-2"><Volume2 size={18} /> Volume</div>
                 <span>{Math.round(volume * 100)}%</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.01" 
                 value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-full h-2 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
+                className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
               />
             </div>
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-white/50 flex items-center gap-2">
-              <AlarmClock size={14} /> Alarmes
+            <h4 className="text-sm font-bold uppercase tracking-widest text-white/50 flex items-center gap-2">
+              <AlarmClock size={18} /> Alarmes
             </h4>
             <div className="space-y-2">
               {alarms.map(alarm => (
                 <div key={alarm.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
                   <div>
-                    <span className="text-2xl font-bold block leading-none">{alarm.time}</span>
-                    <span className="text-[10px] text-white/40 uppercase tracking-tighter">
+                    <span className="text-3xl font-bold block leading-none">{alarm.time}</span>
+                    <span className="text-xs text-white/40 uppercase tracking-tighter">
                       {alarm.days.map(d => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ')}
                     </span>
                   </div>
@@ -1808,18 +1808,18 @@ const App = () => {
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>
             <div className="flex flex-col items-center justify-center h-full text-center drop-shadow-2xl animate-fade-in bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
-              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em]" style={{ fontSize: `${Math.min(30, widgets.date.width / 14)}px` }}>HOJE</span>
+              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em]" style={{ fontSize: `${Math.min(40, widgets.date.width / 14)}px` }}>HOJE</span>
               <span className="font-bold leading-none my-2 text-white" style={{ fontSize: `${Math.min(widgets.date.height * 0.5, widgets.date.width / 1.6)}px` }}>{today.day}</span>
-              <span className="font-light uppercase tracking-[0.3em] text-white/80" style={{ fontSize: `${Math.min(40, widgets.date.width / 10)}px` }}>{today.weekday}</span>
+              <span className="font-light uppercase tracking-[0.3em] text-white/80" style={{ fontSize: `${Math.min(50, widgets.date.width / 10)}px` }}>{today.weekday}</span>
             </div>
           </ResizableWidget>
 
           <ResizableWidget width={widgets.prev.width} height={widgets.prev.height} locked={isLayoutLocked} position={{ x: widgets.prev.x, y: widgets.prev.y }} isSelected={selectedWidget === 'prev'} onSelect={() => setSelectedWidget('prev')} onResize={(w, h) => updateWidget('prev', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('prev', { x, y })}>
             <div className="flex items-center gap-4 opacity-50 p-2 h-full bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
-                <ArrowLeft size={Math.min(40, widgets.prev.width / 6)} />
+                <ArrowLeft size={Math.min(50, widgets.prev.width / 6)} />
                 <div className="text-left">
-                  <span className="block uppercase tracking-widest text-yellow-400 font-bold" style={{ fontSize: `${Math.min(16, widgets.prev.width / 10)}px` }}>Ontem</span>
-                  <span className="font-bold block" style={{ fontSize: `${Math.min(50, widgets.prev.width / 4)}px` }}>{yesterday.day}</span>
+                  <span className="block uppercase tracking-widest text-yellow-400 font-bold" style={{ fontSize: `${Math.min(20, widgets.prev.width / 10)}px` }}>Ontem</span>
+                  <span className="font-bold block" style={{ fontSize: `${Math.min(60, widgets.prev.width / 4)}px` }}>{yesterday.day}</span>
                 </div>
             </div>
           </ResizableWidget>
@@ -1827,10 +1827,10 @@ const App = () => {
           <ResizableWidget width={widgets.next.width} height={widgets.next.height} locked={isLayoutLocked} position={{ x: widgets.next.x, y: widgets.next.y }} isSelected={selectedWidget === 'next'} onSelect={() => setSelectedWidget('next')} onResize={(w, h) => updateWidget('next', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('next', { x, y })}>
             <div className="flex items-center gap-4 justify-end opacity-50 p-2 h-full bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
                 <div className="text-right">
-                  <span className="block uppercase tracking-widest text-yellow-400 font-bold" style={{ fontSize: `${Math.min(16, widgets.next.width / 10)}px` }}>Amanhã</span>
-                  <span className="font-bold block" style={{ fontSize: `${Math.min(50, widgets.next.width / 4)}px` }}>{tomorrow.day}</span>
+                  <span className="block uppercase tracking-widest text-yellow-400 font-bold" style={{ fontSize: `${Math.min(20, widgets.next.width / 10)}px` }}>Amanhã</span>
+                  <span className="font-bold block" style={{ fontSize: `${Math.min(60, widgets.next.width / 4)}px` }}>{tomorrow.day}</span>
                 </div>
-                <ArrowRight size={Math.min(40, widgets.next.width / 6)} />
+                <ArrowRight size={Math.min(50, widgets.next.width / 6)} />
             </div>
           </ResizableWidget>
           
