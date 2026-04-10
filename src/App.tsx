@@ -34,6 +34,36 @@ const MARICA_COORDS = { lat: -22.9194, lon: -42.8186 };
 const apiKey = process.env.GEMINI_API_KEY; // The execution environment provides the key at runtime
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+const BRAZILIAN_CAPITALS = [
+  { name: "Aracaju", lat: -10.9472, lon: -37.0731 },
+  { name: "Belém", lat: -1.4558, lon: -48.5044 },
+  { name: "Belo Horizonte", lat: -19.9208, lon: -43.9378 },
+  { name: "Boa Vista", lat: 2.8235, lon: -60.6758 },
+  { name: "Brasília", lat: -15.7938, lon: -47.8828 },
+  { name: "Campo Grande", lat: -20.4428, lon: -54.6464 },
+  { name: "Cuiabá", lat: -15.6014, lon: -56.0979 },
+  { name: "Curitiba", lat: -25.4290, lon: -49.2671 },
+  { name: "Florianópolis", lat: -27.5969, lon: -48.5495 },
+  { name: "Fortaleza", lat: -3.7184, lon: -38.5434 },
+  { name: "Goiânia", lat: -16.6869, lon: -49.2643 },
+  { name: "João Pessoa", lat: -7.1153, lon: -34.8610 },
+  { name: "Macapá", lat: 0.0389, lon: -51.0664 },
+  { name: "Maceió", lat: -9.6498, lon: -35.7089 },
+  { name: "Manaus", lat: -3.1190, lon: -60.0217 },
+  { name: "Natal", lat: -5.7945, lon: -35.2110 },
+  { name: "Palmas", lat: -10.2128, lon: -48.3603 },
+  { name: "Porto Alegre", lat: -30.0346, lon: -51.2177 },
+  { name: "Porto Velho", lat: -8.7612, lon: -63.9039 },
+  { name: "Recife", lat: -8.0476, lon: -34.8770 },
+  { name: "Rio Branco", lat: -9.9750, lon: -67.8249 },
+  { name: "Rio de Janeiro", lat: -22.9068, lon: -43.1729 },
+  { name: "Salvador", lat: -12.9704, lon: -38.5124 },
+  { name: "São Luís", lat: -2.5391, lon: -44.2829 },
+  { name: "São Paulo", lat: -23.5505, lon: -46.6333 },
+  { name: "Teresina", lat: -5.0892, lon: -42.8016 },
+  { name: "Vitória", lat: -20.3155, lon: -40.3128 }
+];
+
 // Initialize Firebase safely
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const isFirebaseConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.apiKey;
@@ -221,77 +251,95 @@ const generateBeachReport = async (weatherData: any, location: string) => {
 };
 
 const fetchNews = async () => {
+  const genericImage = "https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=800&auto=format&fit=crop";
   const fallbackNews = [
-    { source: "Globo Esporte", title: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/flamengo,soccer", time: "5 min" },
-    { source: "Bahia Notícias", title: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/salvador,bahia,soccer", time: "8 min" },
-    { source: "G1 Política", title: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: "https://loremflickr.com/800/600/politics,brazil", time: "12 min" },
-    { source: "TechCrunch", title: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: "https://loremflickr.com/800/600/technology,smartphone", time: "15 min" },
-    { source: "CNN Brasil", title: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: "https://loremflickr.com/800/600/economy,finance", time: "20 min" },
-    { source: "UOL Esporte", title: "Flamengo monitora mercado europeu para reforços", summary: "O clube estuda propostas para a janela de meio de ano visando fortalecer o elenco para o Mundial.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/flamengo,stadium", time: "22 min" },
-    { source: "Folha", title: "Bahia confirma venda de ingressos para a Copa do Brasil", summary: "A torcida tricolor esgota os primeiros lotes para o jogo de volta na Arena Fonte Nova.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/bahia,arena", time: "25 min" },
-    { source: "The Verge", title: "Realidade Aumentada atinge novo patamar em 2026", summary: "Novos dispositivos leves prometem substituir os smartphones em tarefas do dia a dia até 2028.", category: "Tecnologia", imageUrl: "https://loremflickr.com/800/600/tech,future", time: "30 min" },
-    { source: "Estadão", title: "Agronegócio brasileiro bate recorde de exportação", summary: "Os números do primeiro trimestre de 2026 superam as expectativas mais otimistas do setor.", category: "Economia", imageUrl: "https://loremflickr.com/800/600/agriculture,brazil", time: "35 min" },
-    { source: "BBC Brasil", title: "Expedição na Antártida revela dados sobre o clima", summary: "Pesquisadores brasileiros participam de missão internacional para estudar o derretimento de geleiras.", category: "Ciência", imageUrl: "https://loremflickr.com/800/600/antarctica,ice", time: "40 min" },
-    { source: "Globo.com", title: "Flamengo: Elenco foca na recuperação física", summary: "Após a sequência de jogos em Março, os titulares realizam trabalhos regenerativos na academia.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/gym,training", time: "45 min" },
-    { source: "Bahia Notícias", title: "Bahia projeta temporada de títulos com novo elenco", summary: "A diretoria destaca a evolução do projeto e a integração com a base para os próximos desafios.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/soccer,team", time: "50 min" },
-    { source: "Reuters", title: "Acordos globais buscam estabilidade energética", summary: "Líderes mundiais se reúnem para discutir a transição para fontes renováveis até 2030.", category: "Mundo", imageUrl: "https://loremflickr.com/800/600/energy,renewable", time: "55 min" },
-    { source: "Wired", title: "Exploração de Marte entra em nova fase tripulada", summary: "As agências espaciais confirmam os preparativos para a primeira base permanente no planeta vermelho.", category: "Ciência", imageUrl: "https://loremflickr.com/800/600/mars,space", time: "1h" },
-    { source: "Exame", title: "Startups brasileiras atraem investimentos bilionários", summary: "O cenário de inovação em 2026 mostra maturidade e foco em soluções de sustentabilidade.", category: "Economia", imageUrl: "https://loremflickr.com/800/600/startup,office", time: "1h 5min" },
-    { source: "Globo Esporte", title: "Flamengo: Novas joias da base ganham espaço", summary: "O treinador Leonardo Jardim integra três jovens talentos ao elenco principal para a disputa do Brasileirão.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/soccer,youth", time: "1h 10min" },
-    { source: "Bahia Notícias", title: "Bahia: Arena Fonte Nova terá melhorias tecnológicas", summary: "O projeto inclui conectividade total e novas experiências imersivas para os torcedores.", category: "Esportes", imageUrl: "https://loremflickr.com/800/600/stadium,tech", time: "1h 15min" },
-    { source: "Gizmodo", title: "Computação Quântica se torna acessível via nuvem", summary: "Empresas começam a utilizar o poder de processamento quântico para otimização logística.", category: "Ciência", imageUrl: "https://loremflickr.com/800/600/quantum,computer", time: "1h 20min" },
-    { source: "Valor Econômico", title: "Brasil se consolida como hub de tecnologia verde", summary: "Investimentos em hidrogênio verde colocam o país na vanguarda da economia de baixo carbono.", category: "Economia", imageUrl: "https://loremflickr.com/800/600/green,energy", time: "1h 25min" },
-    { source: "O Globo", title: "Educação Digital: Novas diretrizes para 2026", summary: "O Ministério da Educação implementa currículo focado em alfabetização em IA e programação.", category: "Tecnologia", imageUrl: "https://loremflickr.com/800/600/education,coding", time: "1h 30min" }
+    { source: "Globo Esporte", title: "Flamengo finaliza preparação para o clássico", summary: "O técnico Leonardo Jardim definiu a escalação titular após o último treino tático no Ninho do Urubu.", category: "Esportes", imageUrl: genericImage, time: "5 min", url: "fallback-1" },
+    { source: "Bahia Notícias", title: "Bahia treina em dois turnos visando o Nordestão", summary: "A comissão técnica foca na parte física e finalizações para o próximo confronto decisivo na Fonte Nova.", category: "Esportes", imageUrl: genericImage, time: "8 min", url: "fallback-2" },
+    { source: "G1 Política", title: "Câmara vota projeto de reforma tributária 2026", summary: "A sessão deste domingo promete debates intensos sobre as novas alíquotas para o setor de serviços.", category: "Política", imageUrl: genericImage, time: "12 min", url: "fallback-3" },
+    { source: "TechCrunch", title: "Novos recursos de IA Generativa chegam aos smartphones", summary: "A atualização de Março de 2026 traz modelos de linguagem ultrarrápidos integrados ao hardware.", category: "Tecnologia", imageUrl: genericImage, time: "15 min", url: "fallback-4" },
+    { source: "CNN Brasil", title: "Mercado financeiro reage a novos dados econômicos", summary: "O Ibovespa opera em estabilidade neste início de semana com foco nas decisões do Banco Central.", category: "Economia", imageUrl: genericImage, time: "20 min", url: "fallback-5" },
   ];
 
   const newsApiKey = "06af7a659b144caf9db53213bbd5e392";
   
-  // Obter data de hoje (YYYY-MM-DD)
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  // Endpoint de Top Headlines para o Brasil
+  const url = `https://newsapi.org/v2/top-headlines?country=br&apiKey=${newsApiKey}&pageSize=20`;
   
-  // Assuntos solicitados: esportes, política, tecnologia
-  const query = encodeURIComponent('esporte OR política OR tecnologia OR sports OR politics OR technology');
-  // Domínios variados incluindo WSJ conforme pedido
-  const domains = "wsj.com,reuters.com,techcrunch.com,theverge.com,wired.com,globo.com,uol.com.br";
-  
-  const url = `https://newsapi.org/v2/everything?q=${query}&domains=${domains}&from=${todayStr}&to=${todayStr}&apiKey=${newsApiKey}&sortBy=publishedAt&pageSize=50`;
-  
+  let newArticles: any[] = [];
   try {
     const response = await fetch(url);
     const data = await response.json();
     
     if (data.status === "ok" && data.articles && data.articles.length > 0) {
-      const mappedNews = data.articles
-        .filter((article: any) => article.urlToImage) // Apenas notícias com imagem real
+      newArticles = data.articles
+        .filter((article: any) => article.urlToImage && article.url) // Apenas notícias com imagem real e URL
         .map((article: any) => ({
           source: article.source.name,
           title: article.title,
           summary: article.description || article.content || article.title,
-          category: article.source.name === "The Wall Street Journal" ? "WSJ" : "News",
+          category: "News",
           imageUrl: article.urlToImage,
-          time: new Date(article.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          time: new Date(article.publishedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          url: article.url // Usado como ID único
         }));
-
-      if (mappedNews.length > 0) {
-        // Garantir 50 itens repetindo se necessário
-        let finalNews = [...mappedNews];
-        while (finalNews.length < 50 && finalNews.length > 0) {
-          finalNews = [...finalNews, ...mappedNews].slice(0, 50);
-        }
-        return finalNews;
-      }
     }
   } catch (error) {
     console.error("Erro ao buscar notícias no NewsAPI:", error);
   }
 
-  // Fallback se tudo falhar
-  let finalFallback = [...fallbackNews];
-  while (finalFallback.length < 50) {
-    finalFallback = [...finalFallback, ...fallbackNews].slice(0, 50);
+  // Lógica de Fila (Queue) e Armazenamento Offline
+  // 1. Recuperar notícias salvas do localStorage
+  let cachedNews: any[] = [];
+  try {
+    const saved = localStorage.getItem('smart_screen_news');
+    if (saved) {
+      cachedNews = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Erro ao ler localStorage", e);
   }
-  return finalFallback;
+
+  // Se a API falhou e não temos cache, usar fallback
+  if (newArticles.length === 0 && cachedNews.length === 0) {
+    return fallbackNews;
+  }
+
+  // 2. Filtro de Duplicidade: Adicionar apenas notícias inéditas
+  const existingUrls = new Set(cachedNews.map(item => item.url));
+  const uniqueNewArticles = newArticles.filter(item => !existingUrls.has(item.url));
+
+  // 3. Juntar as novas (no início) com as antigas
+  let combinedNews = [...uniqueNewArticles, ...cachedNews];
+
+  // 4. Manutenção dos 50: Manter apenas os 50 mais recentes
+  if (combinedNews.length > 50) {
+    combinedNews = combinedNews.slice(0, 50);
+  }
+
+  // Se por algum motivo ainda estiver vazio, usa fallback
+  if (combinedNews.length === 0) {
+    combinedNews = fallbackNews;
+  }
+
+  // Salvar no localStorage para uso offline futuro
+  try {
+    localStorage.setItem('smart_screen_news', JSON.stringify(combinedNews));
+  } catch (e) {
+    console.error("Erro ao salvar no localStorage", e);
+  }
+
+  return combinedNews;
+};
+
+const getConditionText = (code: number) => {
+  if (code === 0) return "Ensolarado";
+  if (code <= 3) return "Parcialmente nublado";
+  if (code === 45 || code === 48) return "Neblina";
+  if (code >= 51 && code <= 67) return "Chuva";
+  if (code >= 80 && code <= 82) return "Pancadas de chuva";
+  if (code >= 95) return "Tempestade";
+  if (code >= 71 && code <= 77) return "Neve";
+  return "Nublado";
 };
 
 // --- COMPONENTS ---
@@ -479,16 +527,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   };
 
   // Condition text
-  const getConditionText = (code: number) => {
-    if (code === 0) return "Ensolarado";
-    if (code <= 3) return "Parcialmente nublado";
-    if (code === 45 || code === 48) return "Neblina";
-    if (code >= 51 && code <= 67) return "Chuva";
-    if (code >= 80 && code <= 82) return "Pancadas de chuva";
-    if (code >= 95) return "Tempestade";
-    if (code >= 71 && code <= 77) return "Neve";
-    return "Nublado";
-  };
+  // (moved outside)
 
   // UV Index text
   const getUvText = (uv: number) => {
@@ -536,7 +575,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
         <p className="text-white font-medium mb-6 text-lg">
           {getConditionText(weather.weathercode)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
         </p>
-        <div className="flex overflow-x-auto no-scrollbar gap-8 pb-4 relative">
+        <div className="flex overflow-x-auto hide-scrollbar gap-8 pb-4 relative">
           <svg className="absolute top-16 left-0 w-[800px] h-10 pointer-events-none" preserveAspectRatio="none">
             <path 
               d={`M ${nextHours.slice(0, 12).map((_, i) => {
@@ -843,7 +882,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.5 }}
-            className="h-full no-scrollbar"
+            className="h-full hide-scrollbar"
           >
             {pages[currentPage]}
           </motion.div>
@@ -987,7 +1026,8 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
     if (news.length === 0) {
       fetchNewsInternal();
     }
-    const interval = setInterval(fetchNewsInternal, 15 * 60 * 1000);
+    // Atualização Horária: Roda a cada 60 minutos exatos
+    const interval = setInterval(fetchNewsInternal, 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -996,7 +1036,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
     const rotate = setInterval(() => {
       setAnalysis(null);
       setCurrentIdx((prev) => (prev + 1) % news.length);
-    }, 40000);
+    }, 15000); // Avança automaticamente a cada 15 segundos
     return () => clearInterval(rotate);
   }, [news, isAnalyzing, isSpeaking]);
 
@@ -1043,90 +1083,64 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-yellow-600 text-black font-black px-2 py-0.5 italic text-xs rounded">SMART DISPLAY 24/7</div>
-            <div className="hidden sm:flex items-center gap-2 text-white/40 text-xs font-bold uppercase tracking-widest">
-              <Sparkles size={14} className="animate-pulse" /> AI Assistant
+            <div className="bg-yellow-600 text-black font-black px-3 py-1 italic text-sm rounded">SMART DISPLAY 24/7</div>
+            <div className="hidden sm:flex items-center gap-2 text-white/40 text-sm font-bold uppercase tracking-widest">
+              <Sparkles size={16} className="animate-pulse" /> AI Assistant
             </div>
           </div>
-          <button onClick={() => { onRefresh?.(); fetchNewsInternal(); }} className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50">
-            <RefreshCcw size={14} className={loading ? "animate-spin" : ""} />
+          <button onClick={() => { onRefresh?.(); fetchNewsInternal(); }} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50">
+            <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
 
         {/* Content */}
         {currentNews && (
           <div className="flex-1 flex flex-col justify-end">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="bg-blue-600/80 text-xs font-black uppercase px-2 py-0.5 rounded">{currentNews.category}</span>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="bg-blue-600/80 text-sm font-black uppercase px-3 py-1 rounded">{currentNews.category}</span>
               {currentNews.isBreaking && (
-                <span className="bg-yellow-600 animate-pulse text-xs font-black uppercase px-2 py-0.5 rounded text-black">Destaque</span>
+                <span className="bg-yellow-600 animate-pulse text-sm font-black uppercase px-3 py-1 rounded text-black">Destaque</span>
               )}
             </div>
 
-            <h2 className="text-xl md:text-2xl font-black text-white leading-tight mb-2 tracking-tight line-clamp-2 uppercase italic">
+            <h2 className="text-2xl md:text-4xl font-black text-white leading-tight mb-3 tracking-tight line-clamp-3 uppercase italic drop-shadow-lg">
               {currentNews.title}
             </h2>
 
             {analysis ? (
-              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-3 rounded-xl mb-3 relative animate-in fade-in slide-in-from-bottom-2">
-                <button onClick={() => setAnalysis(null)} className="absolute top-2 right-2 text-white/30 hover:text-white"><X size={14}/></button>
-                <div className="text-yellow-400 text-xs font-bold uppercase mb-1 flex items-center gap-1">
-                  <Sparkles size={12} /> Análise IA
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-4 rounded-xl mb-4 relative animate-in fade-in slide-in-from-bottom-2">
+                <button onClick={() => setAnalysis(null)} className="absolute top-2 right-2 text-white/30 hover:text-white"><X size={18}/></button>
+                <div className="text-yellow-400 text-sm font-bold uppercase mb-2 flex items-center gap-2">
+                  <Sparkles size={16} /> Análise IA
                 </div>
-                <p className="text-sm text-slate-200 font-light leading-relaxed line-clamp-3">{analysis}</p>
+                <p className="text-base text-slate-200 font-light leading-relaxed line-clamp-4">{analysis}</p>
               </div>
             ) : (
-              <p className="text-sm text-slate-400 font-light mb-4 italic leading-relaxed line-clamp-2">
+              <p className="text-base md:text-lg text-slate-300 font-light mb-5 italic leading-relaxed line-clamp-3 drop-shadow-md">
                 "{currentNews.summary}"
               </p>
             )}
 
-            <div className="flex gap-2 mb-4">
-              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-yellow-700/60 hover:bg-yellow-600 backdrop-blur-md text-xs font-black uppercase py-3 rounded-lg flex items-center justify-center gap-1.5 transition-all text-white">
-                {isAnalyzing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Contexto
+            <div className="flex gap-3 mb-5">
+              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-yellow-700/80 hover:bg-yellow-600 backdrop-blur-md text-sm font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 transition-all text-white shadow-lg">
+                {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />} Contexto
               </button>
-              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/60 hover:bg-emerald-600 backdrop-blur-md text-xs font-black uppercase py-3 rounded-lg flex items-center justify-center gap-1.5 transition-all">
-                {isSpeaking ? <div className="w-2 h-2 bg-white rounded-full animate-ping" /> : <Volume2 size={14} />} Ouvir
+              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/80 hover:bg-emerald-600 backdrop-blur-md text-sm font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg">
+                {isSpeaking ? <div className="w-3 h-3 bg-white rounded-full animate-ping" /> : <Volume2 size={18} />} Ouvir
               </button>
             </div>
 
-            <div className="flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
-              <Cpu size={14} className="text-yellow-600" />
+            <div className="flex items-center gap-3 text-sm font-bold text-slate-400 uppercase tracking-widest">
+              <Cpu size={18} className="text-yellow-600" />
               <span className="truncate">FONTE: {currentNews.source}</span>
-              <div className="h-px flex-grow bg-white/10" />
-              <span className="shrink-0">{currentIdx + 1} / {news.length}</span>
+              <div className="h-px flex-grow bg-white/20" />
+              <span className="shrink-0 text-white/60">{currentIdx + 1} / {news.length}</span>
             </div>
           </div>
         )}
-
-        {/* Footer Ticker */}
-        <div className="mt-4 pt-3 border-t border-white/10 flex items-center overflow-hidden shrink-0">
-          <div className="whitespace-nowrap animate-ticker flex items-center gap-8 font-bold text-xs text-white/30 uppercase">
-            {news.length > 0 ? [...news, ...news].map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-yellow-600 font-black">•</span>
-                <span>{item.title}</span>
-              </div>
-            )) : <span className="opacity-50">Sintonizando feed global...</span>}
-          </div>
-        </div>
       </div>
 
       <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-ticker { animation: ticker 150s linear infinite; }
-        
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        
         @keyframes ken-burns {
           0% { transform: scale(1) translate(0, 0); }
           50% { transform: scale(1.1) translate(-1%, -1%); }
@@ -1407,6 +1421,7 @@ const App = () => {
   const [brightness, setBrightness] = useState(1);
   const [volume, setVolume] = useState(0.5);
   const [isNightMode, setIsNightMode] = useState(false);
+  const [aiBackground, setAiBackground] = useState<string | null>(null);
   const [activeAlarm, setActiveAlarm] = useState<any>(null);
   const [alarms, setAlarms] = useState([
     { id: 1, time: "05:00", days: [1, 2, 4, 5], enabled: true }, // Seg, Ter, Qui, Sex
@@ -1564,6 +1579,102 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
+  const generateAiBackground = useCallback(async () => {
+    // 1. Sorteio Geográfico
+    const capital = BRAZILIAN_CAPITALS[Math.floor(Math.random() * BRAZILIAN_CAPITALS.length)];
+    
+    try {
+      // 2. Coleta de Contexto
+      const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${capital.lat}&longitude=${capital.lon}&current=temperature_2m,is_day,weather_code&timezone=auto`);
+      const weatherData = await weatherRes.json();
+      
+      const condition = getConditionText(weatherData.current.weather_code);
+      
+      const hour = new Date().getHours();
+      let period = 'noite';
+      if (hour >= 5 && hour < 12) period = 'manhã';
+      else if (hour >= 12 && hour < 17) period = 'tarde';
+      else if (hour >= 17 && hour < 19) period = 'pôr do sol';
+
+      // 3. Geração da Imagem (Prompt)
+      const prompt = `Uma paisagem urbana de ${capital.name}, Brasil, com clima ${condition.toLowerCase()}, durante o período da ${period}, estilo fotografia 4k altamente detalhada, realista, cinematográfica.`;
+      
+      // 4. Integração de API (Imagen)
+      if (ai) {
+        try {
+          const response = await ai.models.generateImages({
+            model: 'imagen-3.0-generate-002',
+            prompt: prompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: 'image/jpeg',
+              aspectRatio: '16:9'
+            }
+          });
+          
+          const base64Image = response.generatedImages[0].image.imageBytes;
+          const imageUrl = `data:image/jpeg;base64,${base64Image}`;
+          
+          // 5. Armazenamento
+          localStorage.setItem('smart_screen_bg', imageUrl);
+          setAiBackground(imageUrl);
+          return;
+        } catch (genErr) {
+          console.error("Erro ao gerar imagem com IA (Cota ou Falha):", genErr);
+        }
+      }
+      
+      // Fallback se a IA falhar
+      const fallbackUrl = `https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?q=80&w=1920&auto=format&fit=crop`;
+      setAiBackground(fallbackUrl);
+      
+    } catch (err) {
+      console.error("Erro ao processar background:", err);
+      // Tenta recuperar do cache
+      const cachedBg = localStorage.getItem('smart_screen_bg');
+      if (cachedBg) {
+        setAiBackground(cachedBg);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Carrega do cache inicialmente
+    const cachedBg = localStorage.getItem('smart_screen_bg');
+    if (cachedBg) {
+      setAiBackground(cachedBg);
+    }
+    
+    // Gera a primeira imagem imediatamente se não houver cache
+    if (!cachedBg) {
+      generateAiBackground();
+    }
+    
+    // Calcular tempo até o próximo minuto 55 da hora atual
+    const now = new Date();
+    let msUntilNext55 = 0;
+    const currentMinute = now.getMinutes();
+    
+    if (currentMinute < 55) {
+      msUntilNext55 = (55 - currentMinute) * 60 * 1000 - (now.getSeconds() * 1000) - now.getMilliseconds();
+    } else {
+      msUntilNext55 = (60 - currentMinute + 55) * 60 * 1000 - (now.getSeconds() * 1000) - now.getMilliseconds();
+    }
+
+    let intervalId: NodeJS.Timeout;
+    
+    const timeoutId = setTimeout(() => {
+      generateAiBackground();
+      // Após a primeira execução no minuto 55, roda a cada 60 minutos
+      intervalId = setInterval(generateAiBackground, 60 * 60 * 1000);
+    }, msUntilNext55);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [generateAiBackground]);
+
   const loadData = useCallback(async () => {
     if (!navigator.onLine) return;
     try {
@@ -1615,6 +1726,16 @@ const App = () => {
   }, [isLayoutLocked]);
 
   const getBackgroundStyle = () => {
+    if (aiBackground) {
+      return {
+        backgroundImage: `url(${aiBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        transition: 'background-image 5s ease-in-out',
+        filter: `brightness(${brightness})`
+      };
+    }
+
     const code = weather?.weathercode ?? 0;
     const isDay = weather ? weather.is_day !== 0 : true;
     
