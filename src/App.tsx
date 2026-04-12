@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowRight, ArrowLeft, Lock, Edit3, Maximize, Minimize, PlayCircle, 
@@ -1420,7 +1420,6 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [brightness, setBrightness] = useState(1);
   const [volume, setVolume] = useState(0.5);
-  const [isNightMode, setIsNightMode] = useState(false);
   const [aiBackground, setAiBackground] = useState<string | null>(null);
   const [activeAlarm, setActiveAlarm] = useState<any>(null);
   const [alarms, setAlarms] = useState([
@@ -1428,17 +1427,6 @@ const App = () => {
     { id: 2, time: "06:30", days: [3], enabled: true } // Qua
   ]);
   const alarmAudioRef = useRef<HTMLAudioElement>(null);
-
-  useEffect(() => {
-    const hour = currentTime.getHours();
-    const minute = currentTime.getMinutes();
-    const totalMinutes = hour * 60 + minute;
-    
-    // Night mode strictly between 23:00 and 05:00
-    // Day mode (weather aligned) between 05:01 and 22:59
-    const night = totalMinutes >= 1380 || totalMinutes <= 300;
-    setIsNightMode(night);
-  }, [currentTime]);
 
   useEffect(() => {
     // Check alarms every minute
@@ -1603,7 +1591,7 @@ const App = () => {
       if (ai) {
         try {
           const response = await ai.models.generateImages({
-            model: 'imagen-3.0-generate-002',
+            model: 'imagen-4.0-generate-001',
             prompt: prompt,
             config: {
               numberOfImages: 1,
@@ -1725,7 +1713,34 @@ const App = () => {
     if (isLayoutLocked) setSelectedWidget(null);
   }, [isLayoutLocked]);
 
+  const isNightMode = useMemo(() => {
+    const brasiliaTime = new Date(currentTime.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    const hour = brasiliaTime.getHours();
+    return hour >= 23 || hour < 5;
+  }, [currentTime]);
+
+  useEffect(() => {
+    if (isNightMode) {
+      // Pause all audio elements
+      const audioElements = document.querySelectorAll('audio');
+      audioElements.forEach(audio => {
+        if (!audio.paused) {
+          audio.pause();
+        }
+      });
+    }
+  }, [isNightMode]);
+
   const getBackgroundStyle = () => {
+    if (isNightMode) {
+      return {
+        backgroundColor: 'black',
+        backgroundImage: 'none',
+        color: 'white',
+        filter: 'grayscale(100%) brightness(0.1)'
+      };
+    }
+
     if (aiBackground) {
       return {
         backgroundImage: `url(${aiBackground})`,
