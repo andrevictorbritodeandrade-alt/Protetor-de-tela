@@ -1254,7 +1254,7 @@ const ChatModal = ({ isOpen, onClose }) => {
 };
 
 // 6. Radio Player (JB FM)
-const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlaying, volume }) => {
+const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: boolean }> = ({ isPlaying, volume, isNightMode }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlayingRadio, setIsPlayingRadio] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -1267,7 +1267,7 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlayi
 
   useEffect(() => {
     const handleInteraction = () => {
-      if (!hasInteracted && isPlayingRadio && audioRef.current) {
+      if (!hasInteracted && isPlayingRadio && audioRef.current && !isNightMode) {
         audioRef.current.play().catch(e => console.log("Ainda bloqueado:", e));
         setHasInteracted(true);
       }
@@ -1278,15 +1278,15 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlayi
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
     };
-  }, [hasInteracted, isPlayingRadio]);
+  }, [hasInteracted, isPlayingRadio, isNightMode]);
 
   useEffect(() => {
-    if (isPlaying && isPlayingRadio && audioRef.current) {
+    if (isPlaying && isPlayingRadio && audioRef.current && !isNightMode) {
       audioRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
-  }, [isPlaying, isPlayingRadio]);
+  }, [isPlaying, isPlayingRadio, isNightMode]);
 
   return (
     <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
@@ -1414,6 +1414,35 @@ const QuickSettings = ({ brightness, setBrightness, volume, setVolume, alarms, s
 const App = () => {
   const [user, setUser] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const isNightMode = useMemo(() => {
+    const brasiliaTime = new Date(currentTime.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+    const hour = brasiliaTime.getHours();
+    const day = brasiliaTime.getDay(); // 0 (Sun) to 6 (Sat)
+    const month = brasiliaTime.getMonth() + 1;
+    const date = brasiliaTime.getDate();
+    
+    // Simple holiday check (fixed dates)
+    const isHoliday = 
+      (month === 1 && date === 1) ||
+      (month === 4 && date === 21) ||
+      (month === 5 && date === 1) ||
+      (month === 9 && date === 7) ||
+      (month === 10 && date === 12) ||
+      (month === 11 && date === 2) ||
+      (month === 11 && date === 15) ||
+      (month === 11 && date === 20) ||
+      (month === 12 && date === 25);
+
+    const isWeekendOrHolidayOrWed = day === 0 || day === 6 || day === 3 || isHoliday;
+    
+    if (isWeekendOrHolidayOrWed) {
+      return hour >= 23 || hour < 7;
+    } else {
+      return hour >= 23 || hour < 6;
+    }
+  }, [currentTime]);
+
   const [weather, setWeather] = useState(null);
   const [beachReport, setBeachReport] = useState([{title: 'Carregando', text: 'Gerando relatório...'}]);
   const [news, setNews] = useState([]);
@@ -1439,7 +1468,7 @@ const App = () => {
     
     if (triggeredAlarm && !activeAlarm && currentTime.getSeconds() === 0) {
       setActiveAlarm(triggeredAlarm);
-      if (alarmAudioRef.current) {
+      if (alarmAudioRef.current && !isNightMode) {
         alarmAudioRef.current.volume = volume;
         alarmAudioRef.current.play().catch(e => console.log("Erro ao tocar alarme:", e));
       }
@@ -1498,38 +1527,61 @@ const App = () => {
     if (isLandscape) {
       // Landscape layout
       const sideColumnWidth = Math.max(280, Math.floor(w * 0.3)); // Increased width
-      const centerColumnWidth = w - (sideColumnWidth * 2) - (padding * 4);
-      const clockHeight = Math.min(180, h * 0.25);
+      const centerColumnWidth = isNightMode ? w - (padding * 2) : w - (sideColumnWidth * 2) - (padding * 4);
+      const clockHeight = isNightMode ? Math.min(300, h * 0.4) : Math.min(180, h * 0.25);
       const footerHeight = Math.min(120, h * 0.15);
       const dateHeight = h - clockHeight - footerHeight - (padding * 4);
       
-      setWidgets({
-        news: { width: sideColumnWidth, height: h - (padding * 2), x: padding, y: padding },
-        weather: { width: sideColumnWidth, height: h - (padding * 2), x: w - sideColumnWidth - padding, y: padding },
-        clock: { width: centerColumnWidth, height: clockHeight, x: sideColumnWidth + (padding * 2), y: padding },
-        date: { width: centerColumnWidth, height: Math.max(100, dateHeight), x: sideColumnWidth + (padding * 2), y: padding + clockHeight + padding },
-        prev: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2), y: h - footerHeight - padding },
-        next: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2) + (centerColumnWidth / 2) + (padding / 2), y: h - footerHeight - padding }
-      });
+      if (isNightMode) {
+        setWidgets({
+          news: { width: 0, height: 0, x: -1000, y: -1000 }, // Hidden
+          weather: { width: (w / 2) - (padding * 1.5), height: dateHeight, x: padding, y: padding + clockHeight + padding },
+          clock: { width: centerColumnWidth, height: clockHeight, x: padding, y: padding },
+          date: { width: (w / 2) - (padding * 1.5), height: dateHeight, x: (w / 2) + (padding * 0.5), y: padding + clockHeight + padding },
+          prev: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
+          next: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerColumnWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+        });
+      } else {
+        setWidgets({
+          news: { width: sideColumnWidth, height: h - (padding * 2), x: padding, y: padding },
+          weather: { width: sideColumnWidth, height: h - (padding * 2), x: w - sideColumnWidth - padding, y: padding },
+          clock: { width: centerColumnWidth, height: clockHeight, x: sideColumnWidth + (padding * 2), y: padding },
+          date: { width: centerColumnWidth, height: Math.max(100, dateHeight), x: sideColumnWidth + (padding * 2), y: padding + clockHeight + padding },
+          prev: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2), y: h - footerHeight - padding },
+          next: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2) + (centerColumnWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+        });
+      }
     } else {
       // Portrait layout
       const widgetWidth = w - (padding * 2);
-      const clockHeight = 160;
+      const clockHeight = isNightMode ? 240 : 160;
       const weatherHeight = h * 0.35;
       const dateHeight = h * 0.2;
       const newsHeight = h * 0.3;
       
-      setWidgets(prev => ({
-        ...prev,
-        clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
-        weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
-        date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
-        news: { width: widgetWidth, height: newsHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
-        prev: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) },
-        next: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) }
-      }));
+      if (isNightMode) {
+        setWidgets(prev => ({
+          ...prev,
+          clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
+          weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
+          date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
+          news: { width: 0, height: 0, x: -1000, y: -1000 }, // Hidden
+          prev: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
+          next: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) }
+        }));
+      } else {
+        setWidgets(prev => ({
+          ...prev,
+          clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
+          weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
+          date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
+          news: { width: widgetWidth, height: newsHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
+          prev: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) },
+          next: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) }
+        }));
+      }
     }
-  }, []);
+  }, [isNightMode]);
 
   useEffect(() => {
     window.addEventListener('resize', recalculateLayout);
@@ -1713,12 +1765,6 @@ const App = () => {
     if (isLayoutLocked) setSelectedWidget(null);
   }, [isLayoutLocked]);
 
-  const isNightMode = useMemo(() => {
-    const brasiliaTime = new Date(currentTime.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-    const hour = brasiliaTime.getHours();
-    return hour >= 23 || hour < 5;
-  }, [currentTime]);
-
   useEffect(() => {
     if (isNightMode) {
       // Pause all audio elements
@@ -1898,7 +1944,7 @@ const App = () => {
           </div>
         )}
 
-        <RadioPlayer isPlaying={hasStarted} volume={volume} />
+        <RadioPlayer isPlaying={hasStarted} volume={volume} isNightMode={isNightMode} />
         <QuickSettings 
           brightness={brightness} setBrightness={setBrightness} 
           volume={volume} setVolume={setVolume} 
@@ -1934,9 +1980,11 @@ const App = () => {
             <ClockWidget currentTime={currentTime} greeting={currentTime.getHours() < 12 ? 'Bom dia' : currentTime.getHours() < 18 ? 'Boa tarde' : 'Boa noite'} width={widgets.clock.width} height={widgets.clock.height} />
           </ResizableWidget>
           
-          <ResizableWidget width={widgets.news.width} height={widgets.news.height} locked={isLayoutLocked} position={{ x: widgets.news.x, y: widgets.news.y }} isSelected={selectedWidget === 'news'} onSelect={() => setSelectedWidget('news')} onResize={(w, h) => updateWidget('news', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('news', { x, y })}>
-            <NewsWidget news={news} onRefresh={loadData} />
-          </ResizableWidget>
+          {!isNightMode && (
+            <ResizableWidget width={widgets.news.width} height={widgets.news.height} locked={isLayoutLocked} position={{ x: widgets.news.x, y: widgets.news.y }} isSelected={selectedWidget === 'news'} onSelect={() => setSelectedWidget('news')} onResize={(w, h) => updateWidget('news', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('news', { x, y })}>
+              <NewsWidget news={news} onRefresh={loadData} />
+            </ResizableWidget>
+          )}
           
           <ResizableWidget width={widgets.weather.width} height={widgets.weather.height} locked={isLayoutLocked} position={{ x: widgets.weather.x, y: widgets.weather.y }} isSelected={selectedWidget === 'weather'} onSelect={() => setSelectedWidget('weather')} onResize={(w, h) => updateWidget('weather', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('weather', { x, y })}>
             <WeatherWidget weather={weather} locationName={locationName} onRefresh={loadData} />
