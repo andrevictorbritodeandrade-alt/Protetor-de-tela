@@ -1507,7 +1507,6 @@ const App = () => {
   
   const [widgets, setWidgets] = useState({
     clock: { width: 400, height: 160, x: 0, y: 0 },
-    news: { width: 350, height: 600, x: 0, y: 0 }, 
     weather: { width: 350, height: 600, x: 0, y: 0 }, 
     date: { width: 400, height: 300, x: 0, y: 0 }, 
     prev: { width: 190, height: 100, x: 0, y: 0 },
@@ -1526,60 +1525,55 @@ const App = () => {
     
     if (isLandscape) {
       // Landscape layout
-      const sideColumnWidth = Math.max(280, Math.floor(w * 0.3)); // Increased width
-      const centerColumnWidth = isNightMode ? w - (padding * 2) : w - (sideColumnWidth * 2) - (padding * 4);
-      const clockHeight = isNightMode ? Math.min(300, h * 0.4) : Math.min(180, h * 0.25);
+      const sideColumnWidth = Math.max(280, Math.floor(w * 0.25)); // 25% width
+      const weatherWidth = sideColumnWidth;
+      const centerWidth = w - weatherWidth - (padding * 3);
+      
+      const clockHeight = isNightMode ? Math.min(300, h * 0.4) : Math.min(180, h * 0.35);
       const footerHeight = Math.min(120, h * 0.15);
-      const dateHeight = h - clockHeight - footerHeight - (padding * 4);
+      
+      // Weather stays in its corner
+      const weather = { width: weatherWidth, height: h - (padding * 2), x: w - weatherWidth - padding, y: padding };
       
       if (isNightMode) {
         setWidgets({
-          news: { width: 0, height: 0, x: -1000, y: -1000 }, // Hidden
-          weather: { width: (w / 2) - (padding * 1.5), height: dateHeight, x: padding, y: padding + clockHeight + padding },
-          clock: { width: centerColumnWidth, height: clockHeight, x: padding, y: padding },
-          date: { width: (w / 2) - (padding * 1.5), height: dateHeight, x: (w / 2) + (padding * 0.5), y: padding + clockHeight + padding },
-          prev: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
-          next: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerColumnWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+          weather,
+          clock: { width: centerWidth, height: clockHeight, x: padding, y: padding },
+          date: { width: centerWidth, height: h - clockHeight - footerHeight - (padding * 3), x: padding, y: padding + clockHeight + padding },
+          prev: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
+          next: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerWidth / 2) + (padding / 2), y: h - footerHeight - padding }
         });
       } else {
+        // Equal size for rest: clock and date
+        const remainingHeight = h - footerHeight - (padding * 3);
+        const widgetHeight = remainingHeight / 2;
         setWidgets({
-          news: { width: sideColumnWidth, height: h - (padding * 2), x: padding, y: padding },
-          weather: { width: sideColumnWidth, height: h - (padding * 2), x: w - sideColumnWidth - padding, y: padding },
-          clock: { width: centerColumnWidth, height: clockHeight, x: sideColumnWidth + (padding * 2), y: padding },
-          date: { width: centerColumnWidth, height: Math.max(100, dateHeight), x: sideColumnWidth + (padding * 2), y: padding + clockHeight + padding },
-          prev: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2), y: h - footerHeight - padding },
-          next: { width: (centerColumnWidth / 2) - (padding / 2), height: footerHeight, x: sideColumnWidth + (padding * 2) + (centerColumnWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+          weather,
+          clock: { width: centerWidth, height: widgetHeight, x: padding, y: padding },
+          date: { width: centerWidth, height: widgetHeight, x: padding, y: padding + widgetHeight + padding },
+          prev: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
+          next: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerWidth / 2) + (padding / 2), y: h - footerHeight - padding }
         });
       }
     } else {
       // Portrait layout
       const widgetWidth = w - (padding * 2);
       const clockHeight = isNightMode ? 240 : 160;
-      const weatherHeight = h * 0.35;
+      const weatherHeight = h * 0.2;
       const dateHeight = h * 0.2;
-      const newsHeight = h * 0.3;
+      const footerHeight = 100;
+      const availableSpace = h - clockHeight - weatherHeight - dateHeight - (padding * 5);
       
-      if (isNightMode) {
-        setWidgets(prev => ({
-          ...prev,
-          clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
-          weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
-          date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
-          news: { width: 0, height: 0, x: -1000, y: -1000 }, // Hidden
-          prev: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
-          next: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) }
-        }));
-      } else {
-        setWidgets(prev => ({
-          ...prev,
-          clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
-          weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
-          date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
-          news: { width: widgetWidth, height: newsHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
-          prev: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) },
-          next: { width: (widgetWidth / 2) - (padding / 2), height: 100, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + newsHeight + (padding * 4) }
-        }));
-      }
+      const weather = { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding };
+      
+      setWidgets(prev => ({
+        ...prev,
+        weather,
+        clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
+        date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
+        prev: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
+        next: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) }
+      }));
     }
   }, [isNightMode]);
 
@@ -1979,12 +1973,6 @@ const App = () => {
           <ResizableWidget width={widgets.clock.width} height={widgets.clock.height} locked={isLayoutLocked} position={{ x: widgets.clock.x, y: widgets.clock.y }} isSelected={selectedWidget === 'clock'} onSelect={() => setSelectedWidget('clock')} onResize={(w, h) => updateWidget('clock', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('clock', { x, y })}>
             <ClockWidget currentTime={currentTime} greeting={currentTime.getHours() < 12 ? 'Bom dia' : currentTime.getHours() < 18 ? 'Boa tarde' : 'Boa noite'} width={widgets.clock.width} height={widgets.clock.height} />
           </ResizableWidget>
-          
-          {!isNightMode && (
-            <ResizableWidget width={widgets.news.width} height={widgets.news.height} locked={isLayoutLocked} position={{ x: widgets.news.x, y: widgets.news.y }} isSelected={selectedWidget === 'news'} onSelect={() => setSelectedWidget('news')} onResize={(w, h) => updateWidget('news', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('news', { x, y })}>
-              <NewsWidget news={news} onRefresh={loadData} />
-            </ResizableWidget>
-          )}
           
           <ResizableWidget width={widgets.weather.width} height={widgets.weather.height} locked={isLayoutLocked} position={{ x: widgets.weather.x, y: widgets.weather.y }} isSelected={selectedWidget === 'weather'} onSelect={() => setSelectedWidget('weather')} onResize={(w, h) => updateWidget('weather', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('weather', { x, y })}>
             <WeatherWidget weather={weather} locationName={locationName} onRefresh={loadData} />
