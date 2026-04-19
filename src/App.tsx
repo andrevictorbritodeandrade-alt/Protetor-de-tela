@@ -1995,6 +1995,22 @@ const App = () => {
                 </div>
             </div>
           </ResizableWidget>
+
+          <div 
+            className="absolute z-[55] flex gap-4 bg-black/50 backdrop-blur-xl p-3 rounded-full border border-white/10"
+            style={{ 
+              left: `${(widgets.prev.x + widgets.prev.width + widgets.next.x) / 2}px`,
+              bottom: '20px',
+              top: 'auto',
+              transform: 'translateX(-50%)',
+              pointerEvents: 'auto'
+            }}
+            onPointerDown={(e) => e.stopPropagation()} 
+          >
+            <button onClick={toggleFullscreen} className="p-4 rounded-full border-2 bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+               {isFullscreen ? <Minimize size={24}/> : <Maximize size={24}/>}
+            </button>
+          </div>
           
           <ResizableWidget width={widgets.next.width} height={widgets.next.height} locked={isLayoutLocked} position={{ x: widgets.next.x, y: widgets.next.y }} isSelected={selectedWidget === 'next'} onSelect={() => setSelectedWidget('next')} onResize={(w, h) => updateWidget('next', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('next', { x, y })}>
             <div className="flex items-center gap-4 justify-end opacity-50 p-2 h-full bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
@@ -2008,26 +2024,6 @@ const App = () => {
           
         </section>
 
-        <div 
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[55] flex gap-4 bg-black/50 backdrop-blur-xl p-3 rounded-full border border-white/10"
-          onPointerDown={(e) => e.stopPropagation()} 
-        >
-          {installPrompt && (
-            <button onClick={handleInstall} className="p-4 rounded-full border-2 bg-green-500 border-green-400 text-black hover:scale-110 transition-transform shadow-lg shadow-green-500/20 mr-2" title="Instalar App">
-               <Download size={24}/>
-            </button>
-          )}
-          <button onClick={() => setIsChatOpen(true)} className="p-4 rounded-full border-2 bg-yellow-500 border-yellow-400 text-black hover:scale-110 transition-transform shadow-lg shadow-yellow-500/20">
-             <MessageCircle size={24}/>
-          </button>
-          <div className="w-px h-12 bg-white/20 self-center mx-2" />
-          <button onClick={toggleFullscreen} className="p-4 rounded-full border-2 bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
-             {isFullscreen ? <Minimize size={24}/> : <Maximize size={24}/>}
-          </button>
-          <button onClick={() => setIsLayoutLocked(!isLayoutLocked)} className={`p-4 rounded-full border-2 transition-all ${isLayoutLocked ? 'bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10' : 'bg-blue-500 text-white border-blue-400 scale-110 shadow-lg shadow-blue-500/20'}`}>
-            {isLayoutLocked ? <Lock size={24}/> : <Edit3 size={24}/>}
-          </button>
-        </div>
       </main>
     </ErrorBoundary>
   );
