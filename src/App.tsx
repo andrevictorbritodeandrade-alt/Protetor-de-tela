@@ -115,7 +115,7 @@ const fetchWeatherData = async (coords: { lat: number, lon: number }) => {
 
     const hourlyParams = [
       "temperature_2m", "rain", "precipitation", "precipitation_probability", 
-      "apparent_temperature", "dew_point_2m", "relative_humidity_2m", "weather_code", 
+      "apparent_temperature", "dew_point_2m", "relative_humidity_2m", "weather_code", "is_day",
       "pressure_msl", "surface_pressure", "cloud_cover", "cloud_cover_low", 
       "cloud_cover_mid", "cloud_cover_high", "visibility", "evapotranspiration", 
       "wind_speed_10m", "wind_speed_80m", "wind_speed_120m", "wind_speed_180m", 
@@ -164,7 +164,14 @@ const fetchWeatherData = async (coords: { lat: number, lon: number }) => {
 
     const hourlyTime = weatherData.hourly.time || [];
     const todayDailyIdx = 10; // past_days=10, so index 10 is today
-    const currentHourlyIdx = weatherData.hourly.time.findIndex((t: string) => new Date(t) > new Date()) || (weatherData.hourly.time.length - 1);
+    const nowLocal = new Date();
+    let currentHourlyIdx = hourlyTime.findIndex((t: string) => {
+      const d = new Date(t);
+      return d.getFullYear() === nowLocal.getFullYear() && d.getMonth() === nowLocal.getMonth() && d.getDate() === nowLocal.getDate() && d.getHours() === nowLocal.getHours();
+    });
+    if (currentHourlyIdx === -1) {
+      currentHourlyIdx = hourlyTime.findIndex((t: string) => new Date(t) > nowLocal) || (hourlyTime.length - 1);
+    }
 
     return {
       temperature: weatherData.current.temperature_2m,
@@ -331,9 +338,10 @@ const fetchNews = async () => {
   return combinedNews;
 };
 
-const getConditionText = (code: number) => {
-  if (code === 0) return "Ensolarado";
-  if (code <= 3) return "Parcialmente nublado";
+const getConditionText = (code: number, isDay: number | boolean = 1) => {
+  const night = !isDay || isDay === 0;
+  if (code === 0) return night ? "Céu limpo" : "Ensolarado";
+  if (code <= 3) return night ? "Céu limpo com algumas nuvens" : "Parcialmente nublado";
   if (code === 45 || code === 48) return "Neblina";
   if (code >= 51 && code <= 67) return "Chuva";
   if (code >= 80 && code <= 82) return "Pancadas de chuva";
@@ -480,9 +488,10 @@ const ClockWidget = ({ currentTime, greeting, width = 300, height = 150 }) => {
 };
 
 // 3. Weather Widget 
-const getWeatherIcon = (code: number) => {
-  if (code === 0) return "☀️";
-  if (code <= 3) return "⛅";
+const getWeatherIcon = (code: number, isDay: number | boolean = 1) => {
+  const night = !isDay || isDay === 0;
+  if (code === 0) return night ? "🌙" : "☀️";
+  if (code <= 3) return night ? "☁️" : "⛅";
   if (code === 45 || code === 48) return "🌫️";
   if (code >= 51 && code <= 67) return "🌧️";
   if (code >= 80 && code <= 82) return "🌦️";
@@ -548,7 +557,14 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   };
 
   // Hourly forecast (next 24 hours)
-  const currentHourIndex = weather.hourly?.time?.findIndex((t: string) => new Date(t) > new Date()) || 0;
+  const nowLocal = new Date();
+  let currentHourIndex = weather.hourly?.time?.findIndex((t: string) => {
+    const d = new Date(t);
+    return d.getFullYear() === nowLocal.getFullYear() && d.getMonth() === nowLocal.getMonth() && d.getDate() === nowLocal.getDate() && d.getHours() === nowLocal.getHours();
+  });
+  if (currentHourIndex === -1 || currentHourIndex == null) {
+      currentHourIndex = weather.hourly?.time?.findIndex((t: string) => new Date(t) > nowLocal) || 0;
+  }
   const nextHours = weather.hourly?.time?.slice(currentHourIndex, currentHourIndex + 24) || [];
   
   const hourlyTemp = weather.hourly?.temperature_2m || [];
@@ -561,19 +577,19 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
       <div className="flex justify-between items-start mt-2">
         <div className="flex flex-col text-white">
           <div className="text-[120px] font-light leading-none tracking-tighter -ml-2">{temp}°</div>
-          <div className="text-3xl font-medium mt-2">{getConditionText(weather.weathercode)}</div>
+          <div className="text-3xl font-medium mt-2">{getConditionText(weather.weathercode, weather.is_day)}</div>
           <div className="text-xl mt-4 font-medium opacity-90">
             {tempMax}° / {tempMin}° Sensação térmica de {apparentTemp}°
           </div>
         </div>
         <div className="text-[100px] leading-none mt-4 drop-shadow-lg">
-          {getWeatherIcon(weather.weathercode)}
+          {getWeatherIcon(weather.weathercode, weather.is_day)}
         </div>
       </div>
 
       <div className="relative flex-1 flex flex-col justify-end pb-4">
         <p className="text-white font-medium mb-6 text-lg">
-          {getConditionText(weather.weathercode)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
+          {getConditionText(weather.weathercode, weather.is_day)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
         </p>
         <div className="flex overflow-x-auto hide-scrollbar gap-8 pb-4 relative">
           <svg className="absolute top-16 left-0 w-[800px] h-10 pointer-events-none" preserveAspectRatio="none">
@@ -605,11 +621,12 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             const hTemp = Math.round(hourlyTemp[idx] || 0);
             const hCode = hourlyCode[idx] || 0;
             const hPrecip = hourlyPrecip[idx] || 0;
+            const hIsDay = weather.hourly?.is_day?.[idx] ?? 1;
             const date = new Date(timeStr);
             return (
               <div key={i} className="flex flex-col items-center min-w-[40px] text-white z-10">
                 <span className="text-base mb-2">{i === 0 ? 'Agora' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                <span className="text-3xl mb-2">{getWeatherIcon(hCode)}</span>
+                <span className="text-3xl mb-2">{getWeatherIcon(hCode, hIsDay)}</span>
                 <span className="text-xl font-medium mb-6">{hTemp}°</span>
                 {hPrecip > 0 ? (
                   <div className="flex items-center gap-1 text-blue-200 text-sm mt-auto">
@@ -1291,13 +1308,13 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: b
   return (
     <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-3 sm:gap-4 bg-black/50 backdrop-blur-xl px-3 py-2 sm:px-5 sm:py-3 rounded-full border border-white/10 shadow-2xl transition-all hover:bg-black/60">
       <audio ref={audioRef} src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
-      <div className="flex items-center gap-2">
-        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
-        <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/90">JB FM 99.9</span>
+      <div className="flex items-center gap-2 shrink-0">
+        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse shrink-0" : "text-white/40 shrink-0"} />
+        <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/90 whitespace-nowrap">JB FM 99.9</span>
       </div>
       <button 
         onClick={() => setIsPlayingRadio(!isPlayingRadio)}
-        className={`w-8 h-5 sm:w-10 sm:h-6 rounded-full relative transition-all duration-300 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 'bg-white/10'}`}
+        className={`w-8 h-5 sm:w-10 sm:h-6 rounded-full shrink-0 relative transition-all duration-300 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 'bg-white/10'}`}
       >
         <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full absolute top-1 transition-transform ${isPlayingRadio ? 'translate-x-4 sm:translate-x-5' : 'translate-x-1'}`} />
       </button>
@@ -1653,8 +1670,8 @@ const App = () => {
           localStorage.setItem('smart_screen_bg', imageUrl);
           setAiBackground(imageUrl);
           return;
-        } catch (genErr) {
-          console.error("Erro ao gerar imagem com IA (Cota ou Falha):", genErr);
+        } catch (genErr: any) {
+          console.warn("Erro ao gerar imagem com IA, usando fallback.", genErr?.message || "");
         }
       }
       
@@ -1662,8 +1679,8 @@ const App = () => {
       const fallbackUrl = `https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?q=80&w=1920&auto=format&fit=crop`;
       setAiBackground(fallbackUrl);
       
-    } catch (err) {
-      console.error("Erro ao processar background:", err);
+    } catch (err: any) {
+      console.warn("Erro ao processar background, usando cache.", err?.message || "");
       // Tenta recuperar do cache
       const cachedBg = localStorage.getItem('smart_screen_bg');
       if (cachedBg) {
@@ -1979,10 +1996,10 @@ const App = () => {
           </ResizableWidget>
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>
-            <div className="flex flex-col items-center justify-center h-full text-center p-6 overflow-y-auto hide-scrollbar drop-shadow-2xl animate-fade-in bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
-              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em] shrink-0" style={{ fontSize: `${Math.min(32, widgets.date.width / 16)}px` }}>HOJE</span>
-              <span className="font-bold leading-none my-4 text-white" style={{ fontSize: `${Math.min(widgets.date.height * 0.45, widgets.date.width / 2)}px` }}>{today.day}</span>
-              <span className="font-light uppercase tracking-[0.3em] text-white/80 shrink-0" style={{ fontSize: `${Math.min(40, widgets.date.width / 12)}px` }}>{today.weekday}</span>
+            <div className="flex flex-col items-center justify-center h-full text-center p-4 drop-shadow-2xl animate-fade-in bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5 overflow-hidden" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
+              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em] mb-1" style={{ fontSize: `${Math.min(widgets.date.height * 0.15, widgets.date.width / 16, 24)}px` }}>HOJE</span>
+              <span className="font-bold leading-none mb-1 text-white" style={{ fontSize: `${Math.min(widgets.date.height * 0.45, widgets.date.width / 2.5, 120)}px` }}>{today.day}</span>
+              <span className="font-light uppercase tracking-[0.3em] text-white/80" style={{ fontSize: `${Math.min(widgets.date.height * 0.15, widgets.date.width / 14, 32)}px` }}>{today.weekday}</span>
             </div>
           </ResizableWidget>
 
