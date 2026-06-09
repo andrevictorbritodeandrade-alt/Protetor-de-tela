@@ -456,22 +456,22 @@ const ClockWidget = ({ currentTime, greeting, width = 300, height = 150 }) => {
   const locationSize = Math.min(width / 20, height / 10);
   
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full px-2 animate-fade-in drop-shadow-lg bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5 overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-full w-full p-4 overflow-y-auto hide-scrollbar animate-fade-in drop-shadow-lg bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5">
       <div 
         className="font-light tracking-wide opacity-80 uppercase text-yellow-400 leading-none mb-2 text-center" 
-        style={{ fontSize: `${Math.max(greetingSize, 16)}px` }}
+        style={{ fontSize: `${Math.max(greetingSize, 14)}px` }}
       >
         {greeting}
       </div>
       <div 
         className="font-bold tracking-tighter text-white leading-none text-center" 
-        style={{ fontSize: `${Math.max(timeSize, 48)}px` }}
+        style={{ fontSize: `${Math.max(timeSize, 32)}px` }}
       >
         {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </div>
       <div 
-        className="opacity-50 uppercase tracking-[0.2em] mt-2 text-white text-center" 
-        style={{ fontSize: `${Math.max(locationSize, 14)}px` }}
+        className="opacity-50 uppercase tracking-[0.2em] mt-2 text-white text-center shrink-0" 
+        style={{ fontSize: `${Math.max(locationSize, 12)}px` }}
       >
         Maricá - RJ
       </div>
@@ -680,10 +680,10 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     </div>,
 
     // Page 2: Air Quality & Marine & Basic Metrics
-    <div key="page2" className="flex flex-col h-full gap-6">
-      <div className="flex flex-col items-center">
-        <span className="text-white/80 text-sm font-medium uppercase tracking-wider mb-1">Qualidade do Ar</span>
-        <span className="text-white text-xl font-bold mb-3">{getAqiText(weather.aqi)} ({weather.aqi})</span>
+    <div key="page2" className="flex flex-col h-full gap-4 pb-4 overflow-y-auto hide-scrollbar">
+      <div className="flex flex-col items-center shrink-0">
+        <span className="text-white/80 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Qualidade do Ar</span>
+        <span className="text-white text-lg font-black mb-2 uppercase">{getAqiText(weather.aqi)} ({weather.aqi})</span>
         <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden flex">
           <div className="h-full bg-green-400" style={{ width: '20%' }}></div>
           <div className="h-full bg-yellow-400" style={{ width: '40%' }}></div>
@@ -874,7 +874,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
       </div>
 
       {/* Carousel Content */}
-      <div className="flex-1 overflow-hidden px-4 pb-4 z-10 relative">
+      <div className="flex-1 overflow-y-auto hide-scrollbar px-4 pt-2 pb-4 z-10 relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentPage}
@@ -882,7 +882,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.5 }}
-            className="h-full hide-scrollbar"
+            className="h-full"
           >
             {pages[currentPage]}
           </motion.div>
@@ -1079,7 +1079,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-col h-full p-4">
+      <div className="relative z-10 flex flex-col h-full p-6 overflow-y-auto hide-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
@@ -1289,17 +1289,17 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: b
   }, [isPlaying, isPlayingRadio, isNightMode]);
 
   return (
-    <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
+    <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-3 sm:gap-4 bg-black/50 backdrop-blur-xl px-3 py-2 sm:px-5 sm:py-3 rounded-full border border-white/10 shadow-2xl transition-all hover:bg-black/60">
       <audio ref={audioRef} src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
       <div className="flex items-center gap-2">
-        <Music size={18} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
-        <span className="text-sm font-bold uppercase tracking-widest text-white/70">JB FM 99.9</span>
+        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/40"} />
+        <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/90">JB FM 99.9</span>
       </div>
       <button 
         onClick={() => setIsPlayingRadio(!isPlayingRadio)}
-        className={`w-10 h-6 rounded-full relative transition-colors ${isPlayingRadio ? 'bg-yellow-500' : 'bg-white/20'}`}
+        className={`w-8 h-5 sm:w-10 sm:h-6 rounded-full relative transition-all duration-300 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 'bg-white/10'}`}
       >
-        <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isPlayingRadio ? 'translate-x-5' : 'translate-x-1'}`} />
+        <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full absolute top-1 transition-transform ${isPlayingRadio ? 'translate-x-4 sm:translate-x-5' : 'translate-x-1'}`} />
       </button>
     </div>
   );
@@ -1979,10 +1979,10 @@ const App = () => {
           </ResizableWidget>
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>
-            <div className="flex flex-col items-center justify-center h-full text-center drop-shadow-2xl animate-fade-in bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
-              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em]" style={{ fontSize: `${Math.min(40, widgets.date.width / 14)}px` }}>HOJE</span>
-              <span className="font-bold leading-none my-2 text-white" style={{ fontSize: `${Math.min(widgets.date.height * 0.5, widgets.date.width / 1.6)}px` }}>{today.day}</span>
-              <span className="font-light uppercase tracking-[0.3em] text-white/80" style={{ fontSize: `${Math.min(50, widgets.date.width / 10)}px` }}>{today.weekday}</span>
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 overflow-y-auto hide-scrollbar drop-shadow-2xl animate-fade-in bg-black/40 backdrop-blur-md rounded-[3rem] border border-white/5" style={{ pointerEvents: !isLayoutLocked ? 'none' : 'auto' }}>
+              <span className="font-bold opacity-70 text-yellow-400 tracking-[0.4em] shrink-0" style={{ fontSize: `${Math.min(32, widgets.date.width / 16)}px` }}>HOJE</span>
+              <span className="font-bold leading-none my-4 text-white" style={{ fontSize: `${Math.min(widgets.date.height * 0.45, widgets.date.width / 2)}px` }}>{today.day}</span>
+              <span className="font-light uppercase tracking-[0.3em] text-white/80 shrink-0" style={{ fontSize: `${Math.min(40, widgets.date.width / 12)}px` }}>{today.weekday}</span>
             </div>
           </ResizableWidget>
 
