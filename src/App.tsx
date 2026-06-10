@@ -1271,7 +1271,7 @@ const ChatModal = ({ isOpen, onClose }) => {
 };
 
 // 6. Radio Player (JB FM)
-const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: boolean }> = ({ isPlaying, volume, isNightMode }) => {
+const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlaying, volume }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlayingRadio, setIsPlayingRadio] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -1284,7 +1284,7 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: b
 
   useEffect(() => {
     const handleInteraction = () => {
-      if (!hasInteracted && isPlayingRadio && audioRef.current && !isNightMode) {
+      if (!hasInteracted && isPlayingRadio && audioRef.current) {
         audioRef.current.play().catch(e => console.log("Ainda bloqueado:", e));
         setHasInteracted(true);
       }
@@ -1295,19 +1295,19 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number, isNightMode: b
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
     };
-  }, [hasInteracted, isPlayingRadio, isNightMode]);
+  }, [hasInteracted, isPlayingRadio]);
 
   useEffect(() => {
-    if (isPlaying && isPlayingRadio && audioRef.current && !isNightMode) {
+    if (isPlaying && isPlayingRadio && audioRef.current) {
       audioRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
-  }, [isPlaying, isPlayingRadio, isNightMode]);
+  }, [isPlaying, isPlayingRadio]);
 
   return (
     <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-3 sm:gap-4 bg-black/50 backdrop-blur-xl px-3 py-2 sm:px-5 sm:py-3 rounded-full border border-white/10 shadow-2xl transition-all hover:bg-black/60">
-      <audio ref={audioRef} src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
+      <audio ref={audioRef} autoPlay src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
       <div className="flex items-center gap-2 shrink-0">
         <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse shrink-0" : "text-white/40 shrink-0"} />
         <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/90 whitespace-nowrap">JB FM 99.9</span>
@@ -1955,7 +1955,7 @@ const App = () => {
           </div>
         )}
 
-        <RadioPlayer isPlaying={hasStarted} volume={volume} isNightMode={isNightMode} />
+        <RadioPlayer isPlaying={hasStarted} volume={volume} />
         <QuickSettings 
           brightness={brightness} setBrightness={setBrightness} 
           volume={volume} setVolume={setVolume} 
