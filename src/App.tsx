@@ -30,8 +30,8 @@ import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, deleteDo
 import { GoogleGenAI, Type } from "@google/genai";
 
 // --- CONFIG & CONSTANTS ---
-const MARICA_COORDS = { lat: -22.9194, lon: -42.8186 };
-const apiKey = process.env.GEMINI_API_KEY; // The execution environment provides the key at runtime
+const MARICA_COORDS = { lat: -22.906, lon: -42.827 }; // More precise for Jacaroá
+const apiKey = process.env.GEMINI_API_KEY; 
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const BRAZILIAN_CAPITALS = [
@@ -340,7 +340,7 @@ const fetchNews = async () => {
 
 const getConditionText = (code: number, isDay: number | boolean = 1) => {
   const night = !isDay || isDay === 0;
-  if (code === 0) return night ? "Céu limpo" : "Ensolarado";
+  if (code === 0) return night ? "Céu limpo" : "Sol forte";
   if (code <= 3) return night ? "Céu limpo com algumas nuvens" : "Parcialmente nublado";
   if (code === 45 || code === 48) return "Neblina";
   if (code >= 51 && code <= 67) return "Chuva";
@@ -515,7 +515,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   // Auto-rotate pages
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentPage((prev) => (prev + 1) % 4);
+      setCurrentPage((prev) => (prev + 1) % 5); // Updated to include all 5 pages
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -534,9 +534,6 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', { weekday: 'long' });
   };
-
-  // Condition text
-  // (moved outside)
 
   // UV Index text
   const getUvText = (uv: number) => {
@@ -573,49 +570,25 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
 
   const pages = [
     // Page 0: Main & Hourly
-    <div key="page0" className="flex flex-col h-full justify-between">
+    <div key="page0" className="flex flex-col h-full justify-between overflow-hidden">
       <div className="flex justify-between items-start mt-2">
         <div className="flex flex-col text-white">
-          <div className="text-[120px] font-light leading-none tracking-tighter -ml-2">{temp}°</div>
-          <div className="text-3xl font-medium mt-2">{getConditionText(weather.weathercode, weather.is_day)}</div>
-          <div className="text-xl mt-4 font-medium opacity-90">
-            {tempMax}° / {tempMin}° Sensação térmica de {apparentTemp}°
+          <div className="text-[100px] font-light leading-none tracking-tighter -ml-2">{temp}°</div>
+          <div className="text-2xl font-medium mt-1">{getConditionText(weather.weathercode, weather.is_day)}</div>
+          <div className="text-lg mt-2 font-medium opacity-90">
+            {tempMax}° / {tempMin}° Sensação {apparentTemp}°
           </div>
         </div>
-        <div className="text-[100px] leading-none mt-4 drop-shadow-lg">
+        <div className="text-[80px] leading-none mt-2 drop-shadow-lg">
           {getWeatherIcon(weather.weathercode, weather.is_day)}
         </div>
       </div>
 
-      <div className="relative flex-1 flex flex-col justify-end pb-4">
-        <p className="text-white font-medium mb-6 text-lg">
+      <div className="relative flex-1 flex flex-col justify-end pb-2 overflow-hidden">
+        <p className="text-white font-medium mb-4 text-base line-clamp-2">
           {getConditionText(weather.weathercode, weather.is_day)}. Máximas de {tempMax}°C e mínimas de {tempMin}°C.
         </p>
-        <div className="flex overflow-x-auto hide-scrollbar gap-8 pb-4 relative">
-          <svg className="absolute top-16 left-0 w-[800px] h-10 pointer-events-none" preserveAspectRatio="none">
-            <path 
-              d={`M ${nextHours.slice(0, 12).map((_, i) => {
-                const idx = currentHourIndex + i;
-                const hTemp = Math.round(hourlyTemp[idx] || 0);
-                const temps = hourlyTemp.slice(currentHourIndex, currentHourIndex + 12);
-                const minT = temps.length > 0 ? Math.min(...temps) : 0;
-                const maxT = temps.length > 0 ? Math.max(...temps) : 100;
-                const y = 40 - ((hTemp - minT) / (maxT - minT || 1)) * 30;
-                return `${i * 64 + 20},${y}`;
-              }).join(' L ')}`}
-              fill="none" stroke="#FBBF24" strokeWidth="2" 
-            />
-            {nextHours.slice(0, 12).map((_, i) => {
-              const idx = currentHourIndex + i;
-              const hTemp = Math.round(hourlyTemp[idx] || 0);
-              const temps = hourlyTemp.slice(currentHourIndex, currentHourIndex + 12);
-              const minT = temps.length > 0 ? Math.min(...temps) : 0;
-              const maxT = temps.length > 0 ? Math.max(...temps) : 100;
-              const y = 40 - ((hTemp - minT) / (maxT - minT || 1)) * 30;
-              return <circle key={i} cx={i * 64 + 20} cy={y} r="3" fill="#FBBF24" />;
-            })}
-          </svg>
-          
+        <div className="flex overflow-x-auto hide-scrollbar gap-6 pb-2 relative">
           {nextHours.slice(0, 12).map((timeStr: string, i: number) => {
             const idx = currentHourIndex + i;
             const hTemp = Math.round(hourlyTemp[idx] || 0);
@@ -624,17 +597,15 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
             const hIsDay = weather.hourly?.is_day?.[idx] ?? 1;
             const date = new Date(timeStr);
             return (
-              <div key={i} className="flex flex-col items-center min-w-[40px] text-white z-10">
-                <span className="text-base mb-2">{i === 0 ? 'Agora' : date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                <span className="text-3xl mb-2">{getWeatherIcon(hCode, hIsDay)}</span>
-                <span className="text-xl font-medium mb-6">{hTemp}°</span>
-                {hPrecip > 0 ? (
-                  <div className="flex items-center gap-1 text-blue-200 text-sm mt-auto">
-                    <Droplets size={12} />
+              <div key={i} className="flex flex-col items-center min-w-[50px] text-white z-10">
+                <span className="text-xs mb-1 opacity-70">{i === 0 ? 'Agora' : date.getHours() + 'h'}</span>
+                <span className="text-2xl mb-1">{getWeatherIcon(hCode, hIsDay)}</span>
+                <span className="text-lg font-bold">{hTemp}°</span>
+                {hPrecip > 0 && (
+                  <div className="flex items-center gap-0.5 text-blue-300 text-[10px] mt-1">
+                    <Droplets size={8} />
                     <span>{hPrecip}%</span>
                   </div>
-                ) : (
-                  <div className="h-4 mt-auto"></div>
                 )}
               </div>
             );
@@ -643,226 +614,152 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
       </div>
     </div>,
 
-    // Page 1: 7-Day Forecast & UV
-    <div key="page1" className="flex flex-col h-full gap-6">
-      <div className="flex flex-col">
-        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-          <Calendar size={18} /> Previsão de 7 Dias
-        </h3>
-        <div className="flex flex-col gap-4">
-          {weather.daily?.time?.slice(10, 17).map((dateStr: string, i: number) => {
-            const idx = 10 + i;
-            const dMax = weather.daily.temperature_2m_max?.[idx] || 0;
-            const dMin = weather.daily.temperature_2m_min?.[idx] || 0;
-            const dCode = weather.daily.weather_code?.[idx] || 0;
-            const dPrecip = weather.daily.precipitation_probability_max?.[idx] || 0;
-            
-            return (
-              <div key={i} className="flex items-center justify-between text-white">
-                <span className="w-32 text-lg font-medium capitalize">{getDayName(dateStr, i)}</span>
-                <div className="flex items-center gap-1 w-20 text-blue-200 text-sm">
-                  {dPrecip > 0 && (
-                    <>
-                      <Droplets size={14} />
-                      <span>{dPrecip}%</span>
-                    </>
-                  )}
-                </div>
-                <span className="text-3xl w-12 text-center">{getWeatherIcon(dCode)}</span>
-                <div className="flex justify-end gap-3 w-24 text-lg font-medium">
-                  <span>{Math.round(dMax)}°</span>
-                  <span className="text-white/60">{Math.round(dMin)}°</span>
-                </div>
+    // Page 1: 7-Day Forecast
+    <div key="page1" className="flex flex-col h-full gap-2 overflow-hidden">
+      <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm uppercase tracking-widest opacity-60">
+        <Calendar size={14} /> Previsão 7 Dias
+      </h3>
+      <div className="flex flex-col gap-2 overflow-y-auto hide-scrollbar flex-1">
+        {weather.daily?.time?.slice(10, 17).map((dateStr: string, i: number) => {
+          const idx = 10 + i;
+          const dMax = weather.daily.temperature_2m_max?.[idx] || 0;
+          const dMin = weather.daily.temperature_2m_min?.[idx] || 0;
+          const dCode = weather.daily.weather_code?.[idx] || 0;
+          const dPrecip = weather.daily.precipitation_probability_max?.[idx] || 0;
+          
+          return (
+            <div key={i} className="flex items-center justify-between text-white py-1 border-b border-white/5 last:border-0">
+              <span className="w-24 text-sm font-medium capitalize">{getDayName(dateStr, i)}</span>
+              <div className="flex items-center gap-1 w-12 text-blue-300 text-[10px]">
+                {dPrecip > 0 && (
+                  <>
+                    <Droplets size={10} />
+                    <span>{dPrecip}%</span>
+                  </>
+                )}
               </div>
-            );
-          })}
+              <span className="text-2xl w-10 text-center">{getWeatherIcon(dCode)}</span>
+              <div className="flex justify-end gap-2 w-20 text-sm font-bold">
+                <span>{Math.round(dMax)}°</span>
+                <span className="text-white/40">{Math.round(dMin)}°</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>,
+
+    // Page 2: UV & Air Quality
+    <div key="page2" className="flex flex-col h-full gap-4 overflow-hidden">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2 text-white/60 mb-1">
+          <Sun size={16} />
+          <span className="text-xs font-bold uppercase tracking-widest">Índice UV</span>
         </div>
+        <div className="flex items-center gap-4">
+          <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, (weather.uv_index / 11) * 100)}%` }}></div>
+          </div>
+          <span className="text-white font-bold text-lg">{weather.uv_index.toFixed(0)}</span>
+        </div>
+        <p className="text-white/80 text-xs mt-1">{getUvText(weather.uv_index)}</p>
       </div>
 
       <div className="flex flex-col">
-        <div className="flex items-center gap-2 text-white/80 mb-2">
-          <Sun size={20} />
-          <span className="text-base font-medium">Índice UV</span>
+        <div className="flex items-center gap-2 text-white/60 mb-1">
+          <Activity size={16} />
+          <span className="text-xs font-bold uppercase tracking-widest">Qualidade do Ar</span>
         </div>
-        <p className="text-white text-base mb-4">
-          Os raios UV estão {getUvText(weather.uv_index).toLowerCase()}s.
-        </p>
         <div className="flex items-center gap-4">
-          <div className="flex-1 h-2 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full" style={{ width: `${Math.min(100, (weather.uv_index / 11) * 100)}%` }}></div>
+          <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${Math.min(100, (weather.aqi / 100) * 100)}%` }}></div>
           </div>
-          <span className="text-white font-bold text-xl">{weather.uv_index.toFixed(0)}</span>
+          <span className="text-white font-bold text-lg">{weather.aqi}</span>
+        </div>
+        <p className="text-white/80 text-xs mt-1">{getAqiText(weather.aqi)}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mt-auto">
+        <div className="bg-white/5 p-3 rounded-2xl">
+          <div className="flex items-center gap-2 text-white/40 mb-1">
+            <Droplets size={14} />
+            <span className="text-[10px] font-bold uppercase">Umidade</span>
+          </div>
+          <span className="text-white text-xl font-bold">{weather.relative_humidity}%</span>
+        </div>
+        <div className="bg-white/5 p-3 rounded-2xl">
+          <div className="flex items-center gap-2 text-white/40 mb-1">
+            <Wind size={14} />
+            <span className="text-[10px] font-bold uppercase">Vento</span>
+          </div>
+          <span className="text-white text-xl font-bold">{weather.wind_speed} <small className="text-[10px]">km/h</small></span>
         </div>
       </div>
     </div>,
 
-    // Page 2: Air Quality & Marine & Basic Metrics
-    <div key="page2" className="flex flex-col h-full gap-4 pb-4 overflow-y-auto hide-scrollbar">
-      <div className="flex flex-col items-center shrink-0">
-        <span className="text-white/80 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Qualidade do Ar</span>
-        <span className="text-white text-lg font-black mb-2 uppercase">{getAqiText(weather.aqi)} ({weather.aqi})</span>
-        <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden flex">
-          <div className="h-full bg-green-400" style={{ width: '20%' }}></div>
-          <div className="h-full bg-yellow-400" style={{ width: '40%' }}></div>
-          <div className="h-full bg-orange-400" style={{ width: '20%' }}></div>
-          <div className="h-full bg-red-500" style={{ width: '20%' }}></div>
+    // Page 3: Marine & More
+    <div key="page3" className="flex flex-col h-full gap-4 overflow-hidden">
+      <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm uppercase tracking-widest opacity-60">
+        <Waves size={14} /> Condições Marinhas
+      </h3>
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white/5 p-4 rounded-3xl">
+          <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">Altura das Ondas</span>
+          <span className="text-2xl font-bold text-white">{weather.wave_height}m</span>
         </div>
-        <div className="w-full relative mt-1">
-           <div className="absolute top-[-10px] w-3 h-3 bg-white rounded-full shadow-md border-2 border-blue-500" style={{ left: `${Math.min(95, (weather.aqi / 100) * 100)}%` }}></div>
+        <div className="bg-white/5 p-4 rounded-3xl">
+          <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">Temperatura Água</span>
+          <span className="text-2xl font-bold text-white">{weather.water_temp}°</span>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Droplets size={18} />
-            <span className="text-sm font-medium">Umidade</span>
-          </div>
-          <span className="text-white text-2xl font-bold">{weather.relative_humidity}%</span>
+        <div className="bg-white/5 p-4 rounded-3xl">
+          <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">Período Ondas</span>
+          <span className="text-2xl font-bold text-white">{weather.wave_period}s</span>
         </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Wind size={18} />
-            <span className="text-sm font-medium">Vento</span>
-          </div>
-          <span className="text-white text-2xl font-bold">{weather.wind_speed} km/h</span>
-        </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Waves size={18} />
-            <span className="text-sm font-medium">Ondas</span>
-          </div>
-          <span className="text-white text-2xl font-bold">{weather.wave_height}m</span>
-        </div>
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 text-white/80 mb-2">
-            <Thermometer size={18} />
-            <span className="text-sm font-medium">Água</span>
-          </div>
-          <span className="text-white text-2xl font-bold">{weather.water_temp}°</span>
+        <div className="bg-white/5 p-4 rounded-3xl">
+          <span className="text-[10px] text-white/40 font-bold uppercase block mb-1">Pressão</span>
+          <span className="text-2xl font-bold text-white">{Math.round(weather.surface_pressure)}<small className="text-xs">hPa</small></span>
         </div>
       </div>
 
-      <div className="flex justify-between items-center text-white mt-auto">
+      <div className="mt-auto grid grid-cols-2 gap-4">
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-white/80 uppercase">Nascer</span>
-          <span className="text-xl font-bold">{new Date(weather.sunrise).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Nascer</span>
+          <span className="text-base font-bold text-white">{new Date(weather.sunrise).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-sm font-medium text-white/80 uppercase">Pôr do Sol</span>
-          <span className="text-xl font-bold">{new Date(weather.sunset).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Pôr do Sol</span>
+          <span className="text-base font-bold text-white">{new Date(weather.sunset).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
     </div>,
 
-    // Page 3: Advanced Technical Metrics
-    <div key="page3" className="flex flex-col h-full">
-      <div className="flex flex-col">
-        <h3 className="text-yellow-400 text-sm font-black uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-          <Activity size={16} /> Dados Técnicos Avançados
-        </h3>
-        
-        <div className="grid grid-cols-2 gap-y-6 gap-x-8">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Cobertura de Nuvens</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xl font-mono text-white">{weather.cloud_cover}%</span>
-              <span className="text-[10px] text-white/30 font-medium">Total</span>
-            </div>
-            <div className="flex gap-2 mt-1">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Baixa</span>
-                <span className="text-xs font-mono text-white/70">{weather.cloud_low}%</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Média</span>
-                <span className="text-xs font-mono text-white/70">{weather.cloud_mid}%</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Alta</span>
-                <span className="text-xs font-mono text-white/70">{weather.cloud_high}%</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Rajadas de Vento</span>
-            <span className="text-xl font-mono text-white">{weather.wind_gusts} <small className="text-xs opacity-50">km/h</small></span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Solo (Superfície)</span>
-            <div className="flex items-baseline gap-3">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Temp</span>
-                <span className="text-xl font-mono text-white">{weather.soil_temp}°</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Umidade</span>
-                <span className="text-xl font-mono text-white">{weather.soil_moisture}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Radiação Solar</span>
-            <span className="text-xl font-mono text-white">{weather.shortwave_radiation_sum} <small className="text-xs opacity-50">MJ/m²</small></span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Evapotranspiração</span>
-            <span className="text-xl font-mono text-white">{weather.evapotranspiration} <small className="text-xs opacity-50">mm</small></span>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <span className="text-xs text-white/40 font-bold uppercase tracking-wider">Luz Solar</span>
-            <div className="flex items-baseline gap-3">
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Dia</span>
-                <span className="text-xl font-mono text-white">{(weather.daylight_duration / 3600).toFixed(1)}h</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-white/30 uppercase">Sol</span>
-                <span className="text-xl font-mono text-white">{(weather.sunshine_duration / 3600).toFixed(1)}h</span>
-              </div>
-            </div>
-          </div>
+    // Page 4: Technical
+    <div key="page4" className="flex flex-col h-full gap-4 overflow-hidden">
+      <h3 className="text-white font-bold mb-2 flex items-center gap-2 text-sm uppercase tracking-widest opacity-60">
+        <Activity size={14} /> Detalhes Técnicos
+      </h3>
+      
+      <div className="space-y-4 overflow-y-auto hide-scrollbar">
+        <div className="flex justify-between items-center py-2 border-b border-white/5">
+          <span className="text-xs text-white/60">Cobertura de Nuvens</span>
+          <span className="text-sm font-bold text-white">{weather.cloud_cover}%</span>
         </div>
-      </div>
-    </div>,
-
-    // Page 4: Historical Data (Last 10 Days)
-    <div key="page4" className="flex flex-col h-full">
-      <div className="flex flex-col">
-        <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-          <History size={18} /> Últimos 10 Dias
-        </h3>
-        <div className="flex flex-col gap-3">
-          {/* Show a simplified view of the last 10 days */}
-          {[...Array(10)].map((_, i) => {
-            const dayIdx = i * 24; // 24 hours per day
-            const date = new Date(weather.historical.time[dayIdx]);
-            const avgTemp = weather.historical.temp.slice(dayIdx, dayIdx + 24).reduce((a, b) => a + b, 0) / 24;
-            const maxPrecip = Math.max(...weather.historical.precip.slice(dayIdx, dayIdx + 24));
-            
-            return (
-              <div key={i} className="flex items-center justify-between text-white text-sm">
-                <span className="w-24 capitalize">{date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })}</span>
-                <div className="flex items-center gap-1 w-16 text-blue-200 text-[10px]">
-                  {maxPrecip > 0 && (
-                    <>
-                      <Droplets size={10} />
-                      <span>{maxPrecip}%</span>
-                    </>
-                  )}
-                </div>
-                <div className="flex justify-end gap-3 w-20 font-mono">
-                  <span>{Math.round(avgTemp)}°</span>
-                  <span className="text-white/40">Média</span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex justify-between items-center py-2 border-b border-white/5">
+          <span className="text-xs text-white/60">Visibilidade</span>
+          <span className="text-sm font-bold text-white">{(weather.visibility / 1000).toFixed(1)} km</span>
+        </div>
+        <div className="flex justify-between items-center py-2 border-b border-white/5">
+          <span className="text-xs text-white/60">Ponto de Orvalho</span>
+          <span className="text-sm font-bold text-white">{weather.dew_point}°C</span>
+        </div>
+        <div className="flex justify-between items-center py-2 border-b border-white/5">
+          <span className="text-xs text-white/60">Rajadas de Vento</span>
+          <span className="text-sm font-bold text-white">{weather.wind_gusts} km/h</span>
+        </div>
+        <div className="flex justify-between items-center py-2 border-b border-white/5">
+          <span className="text-xs text-white/60">Luz do Dia</span>
+          <span className="text-sm font-bold text-white">{(weather.daylight_duration / 3600).toFixed(1)}h</span>
         </div>
       </div>
     </div>
@@ -872,21 +769,17 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     <div className={`animate-float flex flex-col w-full h-full bg-black/40 backdrop-blur-md border border-white/5 rounded-[3rem] shadow-2xl relative overflow-hidden transition-all duration-700 ${isUpdating ? 'scale-[1.02] opacity-90' : 'scale-100'}`}>
       
       {/* Header */}
-      <div className="flex justify-between items-center p-4 pb-2 shrink-0 z-10">
-        <div className="flex items-center gap-2 text-white">
-          <Menu size={24} />
-          <span className="text-xl font-medium">{locationName}</span>
-          <MapPin size={16} />
+      <div className="flex justify-between items-center p-6 pb-2 shrink-0 z-10">
+        <div className="flex items-center gap-3 text-white">
+          <span className="text-2xl font-bold tracking-tight">{locationName}</span>
+          <MapPin size={20} className="text-yellow-500/50" />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1 mr-2">
+        <div className="flex items-center gap-4">
+          <div className="flex gap-1.5 mr-2">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentPage ? 'bg-yellow-400 w-3' : 'bg-white/20'}`} />
+              <div key={i} className={`w-2 h-2 rounded-full transition-all ${i === currentPage ? 'bg-yellow-400 w-4' : 'bg-white/20'}`} />
             ))}
           </div>
-          <button onClick={(e) => { e.stopPropagation(); onRefresh(); }} className="p-2 text-white/80 hover:text-white transition-colors">
-            <Bot size={20} className={isUpdating ? 'animate-spin' : ''} />
-          </button>
         </div>
       </div>
 
@@ -1096,18 +989,12 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-col h-full p-6 overflow-y-auto hide-scrollbar">
+      <div className="relative z-10 flex flex-col h-full p-8 overflow-y-auto hide-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="bg-yellow-600 text-black font-black px-3 py-1 italic text-sm rounded">SMART DISPLAY 24/7</div>
-            <div className="hidden sm:flex items-center gap-2 text-white/40 text-sm font-bold uppercase tracking-widest">
-              <Sparkles size={16} className="animate-pulse" /> AI Assistant
-            </div>
+            <div className="bg-yellow-600 text-black font-black px-3 py-1 italic text-sm rounded shadow-lg">SMART DISPLAY 24/7</div>
           </div>
-          <button onClick={() => { onRefresh?.(); fetchNewsInternal(); }} className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white/50">
-            <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
-          </button>
         </div>
 
         {/* Content */}
@@ -1120,7 +1007,7 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
               )}
             </div>
 
-            <h2 className="text-2xl md:text-4xl font-black text-white leading-tight mb-3 tracking-tight line-clamp-3 uppercase italic drop-shadow-lg">
+            <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-4 tracking-tight line-clamp-3 uppercase italic drop-shadow-2xl">
               {currentNews.title}
             </h2>
 
@@ -1138,12 +1025,12 @@ const NewsWidget = ({ news: initialNews, onRefresh }) => {
               </p>
             )}
 
-            <div className="flex gap-3 mb-5">
-              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-yellow-700/80 hover:bg-yellow-600 backdrop-blur-md text-sm font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 transition-all text-white shadow-lg">
-                {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />} Contexto
+            <div className="flex gap-4 mb-6">
+              <button onClick={analyzeContext} disabled={isAnalyzing} className="flex-1 bg-yellow-700/60 hover:bg-yellow-600 backdrop-blur-md text-sm font-black uppercase py-5 rounded-2xl flex items-center justify-center gap-2 transition-all text-white shadow-xl">
+                {isAnalyzing ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />} IA Contexto
               </button>
-              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/80 hover:bg-emerald-600 backdrop-blur-md text-sm font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg">
-                {isSpeaking ? <div className="w-3 h-3 bg-white rounded-full animate-ping" /> : <Volume2 size={18} />} Ouvir
+              <button onClick={playNewsAudio} disabled={isSpeaking} className="flex-1 bg-emerald-700/60 hover:bg-emerald-600 backdrop-blur-md text-sm font-black uppercase py-5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-xl">
+                {isSpeaking ? <div className="w-4 h-4 bg-white rounded-full animate-ping" /> : <Volume2 size={20} />} Narrar Notícia
               </button>
             </div>
 
@@ -1284,39 +1171,55 @@ const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlayi
 
   useEffect(() => {
     const handleInteraction = () => {
-      if (!hasInteracted && isPlayingRadio && audioRef.current) {
+      if (audioRef.current && audioRef.current.paused && isPlayingRadio) {
         audioRef.current.play().catch(e => console.log("Ainda bloqueado:", e));
-        setHasInteracted(true);
       }
+      setHasInteracted(true);
     };
-    window.addEventListener('click', handleInteraction);
-    window.addEventListener('touchstart', handleInteraction);
+    window.addEventListener('click', handleInteraction, { once: false });
+    window.addEventListener('touchstart', handleInteraction, { once: false });
+    window.addEventListener('keydown', handleInteraction, { once: false });
     return () => {
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
     };
-  }, [hasInteracted, isPlayingRadio]);
+  }, [isPlayingRadio]);
 
   useEffect(() => {
+    let playInterval: NodeJS.Timeout;
     if (isPlaying && isPlayingRadio && audioRef.current) {
-      audioRef.current.play().catch(e => console.log("Autoplay bloqueado:", e));
+      const attemptPlay = () => {
+        if (audioRef.current && audioRef.current.paused) {
+          audioRef.current.play()
+            .then(() => {
+              clearInterval(playInterval);
+            })
+            .catch(() => {});
+        } else if (audioRef.current && !audioRef.current.paused) {
+          clearInterval(playInterval);
+        }
+      };
+      attemptPlay();
+      playInterval = setInterval(attemptPlay, 2000);
     } else if (audioRef.current) {
       audioRef.current.pause();
     }
+    return () => { if (playInterval) clearInterval(playInterval); };
   }, [isPlaying, isPlayingRadio]);
 
   return (
-    <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 flex items-center gap-3 sm:gap-4 bg-black/50 backdrop-blur-xl px-3 py-2 sm:px-5 sm:py-3 rounded-full border border-white/10 shadow-2xl transition-all hover:bg-black/60">
+    <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/60 backdrop-blur-2xl px-6 py-4 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-all hover:bg-black/70">
       <audio ref={audioRef} autoPlay src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
-      <div className="flex items-center gap-2 shrink-0">
-        <Music size={16} className={isPlayingRadio ? "text-yellow-400 animate-pulse shrink-0" : "text-white/40 shrink-0"} />
-        <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-white/90 whitespace-nowrap">JB FM 99.9</span>
+      <div className="flex items-center gap-3 shrink-0">
+        <Music size={20} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/20"} />
+        <span className="text-sm font-bold uppercase tracking-[0.25em] text-white/80 whitespace-nowrap">RÁDIO JB FM</span>
       </div>
       <button 
         onClick={() => setIsPlayingRadio(!isPlayingRadio)}
-        className={`w-8 h-5 sm:w-10 sm:h-6 rounded-full shrink-0 relative transition-all duration-300 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.3)]' : 'bg-white/10'}`}
+        className={`w-12 h-7 rounded-full shrink-0 relative transition-all duration-500 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]' : 'bg-white/10'}`}
       >
-        <div className={`w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full absolute top-1 transition-transform ${isPlayingRadio ? 'translate-x-4 sm:translate-x-5' : 'translate-x-1'}`} />
+        <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform duration-300 ${isPlayingRadio ? 'translate-x-6' : 'translate-x-1'}`} />
       </button>
     </div>
   );
@@ -1541,35 +1444,36 @@ const App = () => {
     const padding = Math.min(12, w * 0.01); // Reduced padding
     
     if (isLandscape) {
-      // Landscape layout
-      const sideColumnWidth = Math.max(280, Math.floor(w * 0.25)); // 25% width
+      // Landscape layout - Optimized for TV/Large screens
+      const sideColumnWidth = Math.max(320, Math.floor(w * 0.28)); 
       const weatherWidth = sideColumnWidth;
       const centerWidth = w - weatherWidth - (padding * 3);
       
-      const clockHeight = isNightMode ? Math.min(300, h * 0.4) : Math.min(180, h * 0.35);
-      const footerHeight = Math.min(120, h * 0.15);
+      const clockHeight = isNightMode ? Math.min(400, h * 0.5) : Math.min(220, h * 0.3);
+      const footerHeight = Math.min(150, h * 0.18);
       
-      // Weather stays in its corner
       const weather = { width: weatherWidth, height: h - (padding * 2), x: w - weatherWidth - padding, y: padding };
       
+      const footerBtnWidth = 80;
+      const footerWidgetWidth = (centerWidth - footerBtnWidth - (padding * 2)) / 2;
+
       if (isNightMode) {
         setWidgets({
           weather,
           clock: { width: centerWidth, height: clockHeight, x: padding, y: padding },
           date: { width: centerWidth, height: h - clockHeight - footerHeight - (padding * 3), x: padding, y: padding + clockHeight + padding },
-          prev: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
-          next: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+          prev: { width: footerWidgetWidth, height: footerHeight, x: padding, y: h - footerHeight - padding },
+          next: { width: footerWidgetWidth, height: footerHeight, x: padding + footerWidgetWidth + footerBtnWidth + (padding * 2), y: h - footerHeight - padding }
         });
       } else {
-        // Equal size for rest: clock and date
         const remainingHeight = h - footerHeight - (padding * 3);
         const widgetHeight = remainingHeight / 2;
         setWidgets({
           weather,
           clock: { width: centerWidth, height: widgetHeight, x: padding, y: padding },
           date: { width: centerWidth, height: widgetHeight, x: padding, y: padding + widgetHeight + padding },
-          prev: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
-          next: { width: (centerWidth / 2) - (padding / 2), height: footerHeight, x: padding + (centerWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+          prev: { width: footerWidgetWidth, height: footerHeight, x: padding, y: h - footerHeight - padding },
+          next: { width: footerWidgetWidth, height: footerHeight, x: padding + footerWidgetWidth + footerBtnWidth + (padding * 2), y: h - footerHeight - padding }
         });
       }
     } else {
@@ -1654,7 +1558,7 @@ const App = () => {
       if (ai) {
         try {
           const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
+            model: 'imagen-3.0-generate-001',
             prompt: prompt,
             config: {
               numberOfImages: 1,
@@ -1955,13 +1859,9 @@ const App = () => {
           </div>
         )}
 
+        {/* Removing RadioPlayer and QuickSettings as per "tire os outros dois" and "deixe só o botão de full screen" */}
         <RadioPlayer isPlaying={hasStarted} volume={volume} />
-        <QuickSettings 
-          brightness={brightness} setBrightness={setBrightness} 
-          volume={volume} setVolume={setVolume} 
-          alarms={alarms} setAlarms={setAlarms}
-          isNightMode={isNightMode}
-        />
+        
         <AlarmOverlay 
           alarm={activeAlarm} 
           volume={volume}
@@ -2014,18 +1914,18 @@ const App = () => {
           </ResizableWidget>
 
           <div 
-            className="absolute z-[55] flex gap-4 bg-black/50 backdrop-blur-xl p-3 rounded-full border border-white/10"
+            className="absolute z-[55] flex gap-4 bg-black/50 backdrop-blur-xl p-2 rounded-full border border-white/10"
             style={{ 
-              left: `${(widgets.prev.x + widgets.prev.width + widgets.next.x) / 2}px`,
-              bottom: '20px',
+              left: `${widgets.prev.x + widgets.prev.width + 40}px`,
+              bottom: '30px',
               top: 'auto',
               transform: 'translateX(-50%)',
               pointerEvents: 'auto'
             }}
             onPointerDown={(e) => e.stopPropagation()} 
           >
-            <button onClick={toggleFullscreen} className="p-4 rounded-full border-2 bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
-               {isFullscreen ? <Minimize size={24}/> : <Maximize size={24}/>}
+            <button onClick={toggleFullscreen} className="p-4 rounded-full border-2 bg-white/5 border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors shadow-2xl">
+               {isFullscreen ? <Minimize size={28}/> : <Maximize size={28}/>}
             </button>
           </div>
           
