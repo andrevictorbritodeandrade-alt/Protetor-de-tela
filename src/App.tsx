@@ -500,7 +500,7 @@ const getWeatherIcon = (code: number, isDay: number | boolean = 1) => {
   return "☁️";
 };
 
-const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, locationName: string, onRefresh: () => void }) => {
+const WeatherWidget = ({ weather, locationName, onRefresh, width = 350, height = 600 }: { weather: any, locationName: string, onRefresh: () => void, width?: number, height?: number }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [currentPage, setCurrentPage] = useState(0);
@@ -515,7 +515,7 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   // Auto-rotate pages
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentPage((prev) => (prev + 1) % 5); // Updated to include all 5 pages
+      setCurrentPage((prev) => (prev + 1) % 5);
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -526,6 +526,10 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
   const tempMax = Math.round(Number(weather.temp_max));
   const tempMin = Math.round(Number(weather.temp_min));
   const apparentTemp = Math.round(Number(weather.apparent_temperature));
+  
+  // Responsive font sizes
+  const mainTempSize = Math.min(width / 3.2, height / 3.5);
+  const iconSize = Math.min(width / 4, height / 4);
   
   // Helper for day names
   const getDayName = (dateString: string, index: number) => {
@@ -573,13 +577,13 @@ const WeatherWidget = ({ weather, locationName, onRefresh }: { weather: any, loc
     <div key="page0" className="flex flex-col h-full justify-between overflow-hidden">
       <div className="flex justify-between items-start mt-2">
         <div className="flex flex-col text-white">
-          <div className="text-[100px] font-light leading-none tracking-tighter -ml-2">{temp}°</div>
+          <div className="font-light leading-none tracking-tighter -ml-2" style={{ fontSize: `${mainTempSize}px` }}>{temp}°</div>
           <div className="text-2xl font-medium mt-1">{getConditionText(weather.weathercode, weather.is_day)}</div>
           <div className="text-lg mt-2 font-medium opacity-90">
             {tempMax}° / {tempMin}° Sensação {apparentTemp}°
           </div>
         </div>
-        <div className="text-[80px] leading-none mt-2 drop-shadow-lg">
+        <div className="leading-none mt-2 drop-shadow-lg" style={{ fontSize: `${iconSize}px` }}>
           {getWeatherIcon(weather.weathercode, weather.is_day)}
         </div>
       </div>
@@ -1157,75 +1161,6 @@ const ChatModal = ({ isOpen, onClose }) => {
   );
 };
 
-// 6. Radio Player (JB FM)
-const RadioPlayer: React.FC<{ isPlaying: boolean, volume: number }> = ({ isPlaying, volume }) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlayingRadio, setIsPlayingRadio] = useState(true);
-  const [hasInteracted, setHasInteracted] = useState(false);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
-  }, [volume]);
-
-  useEffect(() => {
-    const handleInteraction = () => {
-      if (audioRef.current && audioRef.current.paused && isPlayingRadio) {
-        audioRef.current.play().catch(e => console.log("Ainda bloqueado:", e));
-      }
-      setHasInteracted(true);
-    };
-    window.addEventListener('click', handleInteraction, { once: false });
-    window.addEventListener('touchstart', handleInteraction, { once: false });
-    window.addEventListener('keydown', handleInteraction, { once: false });
-    return () => {
-      window.removeEventListener('click', handleInteraction);
-      window.removeEventListener('touchstart', handleInteraction);
-      window.removeEventListener('keydown', handleInteraction);
-    };
-  }, [isPlayingRadio]);
-
-  useEffect(() => {
-    let playInterval: NodeJS.Timeout;
-    if (isPlaying && isPlayingRadio && audioRef.current) {
-      const attemptPlay = () => {
-        if (audioRef.current && audioRef.current.paused) {
-          audioRef.current.play()
-            .then(() => {
-              clearInterval(playInterval);
-            })
-            .catch(() => {});
-        } else if (audioRef.current && !audioRef.current.paused) {
-          clearInterval(playInterval);
-        }
-      };
-      attemptPlay();
-      playInterval = setInterval(attemptPlay, 2000);
-    } else if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    return () => { if (playInterval) clearInterval(playInterval); };
-  }, [isPlaying, isPlayingRadio]);
-
-  return (
-    <div className="absolute top-8 right-8 z-50 flex items-center gap-4 bg-black/60 backdrop-blur-2xl px-6 py-4 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-all hover:bg-black/70">
-      <audio ref={audioRef} autoPlay src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
-      <div className="flex items-center gap-3 shrink-0">
-        <Music size={20} className={isPlayingRadio ? "text-yellow-400 animate-pulse" : "text-white/20"} />
-        <span className="text-sm font-bold uppercase tracking-[0.25em] text-white/80 whitespace-nowrap">RÁDIO JB FM</span>
-      </div>
-      <button 
-        onClick={() => setIsPlayingRadio(!isPlayingRadio)}
-        className={`w-12 h-7 rounded-full shrink-0 relative transition-all duration-500 ${isPlayingRadio ? 'bg-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.4)]' : 'bg-white/10'}`}
-      >
-        <div className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-transform duration-300 ${isPlayingRadio ? 'translate-x-6' : 'translate-x-1'}`} />
-      </button>
-    </div>
-  );
-};
-
-
 // 7. Alarm Overlay
 const AlarmOverlay = ({ alarm, onDismiss, volume }) => {
   if (!alarm) return null;
@@ -1247,102 +1182,35 @@ const AlarmOverlay = ({ alarm, onDismiss, volume }) => {
 };
 
 // 8. Quick Settings
-const QuickSettings = ({ brightness, setBrightness, volume, setVolume, alarms, setAlarms, isNightMode }) => {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <div className="fixed top-8 left-8 z-50 flex flex-col items-start gap-4">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-black/40 backdrop-blur-md p-4 rounded-full border border-white/10 text-white/70 hover:text-white transition-all shadow-xl"
-      >
-        <Menu size={24} />
-      </button>
-
-      {isOpen && (
-        <div className="bg-black/80 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/10 w-80 shadow-2xl animate-fade-in flex flex-col gap-8">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold uppercase tracking-widest text-yellow-400">Ajustes</h3>
-            <button onClick={() => setIsOpen(false)}><X size={20} /></button>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm font-bold uppercase tracking-widest text-white/50">
-                <div className="flex items-center gap-2"><Sun size={18} /> Brilho</div>
-                <span>{Math.round(brightness * 100)}%</span>
-              </div>
-              <input 
-                type="range" min="0.1" max="1" step="0.01" 
-                value={brightness} onChange={(e) => setBrightness(parseFloat(e.target.value))}
-                className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm font-bold uppercase tracking-widest text-white/50">
-                <div className="flex items-center gap-2"><Volume2 size={18} /> Volume</div>
-                <span>{Math.round(volume * 100)}%</span>
-              </div>
-              <input 
-                type="range" min="0" max="1" step="0.01" 
-                value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))}
-                className="w-full h-3 bg-white/10 rounded-full appearance-none cursor-pointer accent-yellow-500"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-white/50 flex items-center gap-2">
-              <AlarmClock size={18} /> Alarmes
-            </h4>
-            <div className="space-y-2">
-              {alarms.map(alarm => (
-                <div key={alarm.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
-                  <div>
-                    <span className="text-3xl font-bold block leading-none">{alarm.time}</span>
-                    <span className="text-xs text-white/40 uppercase tracking-tighter">
-                      {alarm.days.map(d => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ')}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => setAlarms(alarms.map(a => a.id === alarm.id ? {...a, enabled: !a.enabled} : a))}
-                    className={`w-10 h-6 rounded-full relative transition-colors ${alarm.enabled ? 'bg-green-500' : 'bg-white/10'}`}
-                  >
-                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${alarm.enabled ? 'translate-x-5' : 'translate-x-1'}`} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {isNightMode && (
-            <div className="bg-blue-500/20 border border-blue-500/30 p-4 rounded-2xl flex items-center gap-3">
-              <Moon size={20} className="text-blue-400" />
-              <span className="text-xs font-medium text-blue-200">Modo Noturno Ativo</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-
 // --- MAIN APP COMPONENT ---
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [brightness, setBrightness] = useState(1);
+  const [volume, setVolume] = useState(0.5);
+  const [isPlayingRadio, setIsPlayingRadio] = useState(true);
+  const [weather, setWeather] = useState(null);
+  const [beachReport, setBeachReport] = useState([{title: 'Carregando', text: 'Gerando relatório...'}]);
+  const [news, setNews] = useState([]);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [aiBackground, setAiBackground] = useState<string | null>(null);
+  const [activeAlarm, setActiveAlarm] = useState<any>(null);
+  const [alarms, setAlarms] = useState([
+    { id: 1, time: "05:00", days: [1, 2, 4, 5], enabled: true },
+    { id: 2, time: "06:30", days: [3], enabled: true }
+  ]);
+  
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const alarmAudioRef = useRef<HTMLAudioElement>(null);
 
   const isNightMode = useMemo(() => {
     const brasiliaTime = new Date(currentTime.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
     const hour = brasiliaTime.getHours();
-    const day = brasiliaTime.getDay(); // 0 (Sun) to 6 (Sat)
+    const day = brasiliaTime.getDay();
     const month = brasiliaTime.getMonth() + 1;
     const date = brasiliaTime.getDate();
     
-    // Simple holiday check (fixed dates)
     const isHoliday = 
       (month === 1 && date === 1) ||
       (month === 4 && date === 21) ||
@@ -1362,20 +1230,6 @@ const App = () => {
       return hour >= 23 || hour < 6;
     }
   }, [currentTime]);
-
-  const [weather, setWeather] = useState(null);
-  const [beachReport, setBeachReport] = useState([{title: 'Carregando', text: 'Gerando relatório...'}]);
-  const [news, setNews] = useState([]);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [brightness, setBrightness] = useState(1);
-  const [volume, setVolume] = useState(0.5);
-  const [aiBackground, setAiBackground] = useState<string | null>(null);
-  const [activeAlarm, setActiveAlarm] = useState<any>(null);
-  const [alarms, setAlarms] = useState([
-    { id: 1, time: "05:00", days: [1, 2, 4, 5], enabled: true }, // Seg, Ter, Qui, Sex
-    { id: 2, time: "06:30", days: [3], enabled: true } // Qua
-  ]);
-  const alarmAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     // Check alarms every minute
@@ -1441,62 +1295,90 @@ const App = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const isLandscape = w > h;
-    const padding = Math.min(12, w * 0.01); // Reduced padding
+    
+    // Proporções otimizadas para TV (Samsung Tizen) com proteção de overscan
+    const padding = Math.max(40, Math.floor(w * 0.04)); 
     
     if (isLandscape) {
-      // Landscape layout - Optimized for TV/Large screens
-      const sideColumnWidth = Math.max(320, Math.floor(w * 0.28)); 
-      const weatherWidth = sideColumnWidth;
+      const weatherWidth = Math.max(400, Math.floor(w * 0.32));
       const centerWidth = w - weatherWidth - (padding * 3);
       
-      const clockHeight = isNightMode ? Math.min(400, h * 0.5) : Math.min(220, h * 0.3);
-      const footerHeight = Math.min(150, h * 0.18);
+      // Ajuste de altura conforme modo noturno para destaque do relógio
+      const clockHeight = isNightMode ? Math.floor(h * 0.45) : Math.floor(h * 0.35);
+      const footerHeight = Math.floor(h * 0.15);
+      const centerContentHeight = h - clockHeight - footerHeight - (padding * 4);
       
-      const weather = { width: weatherWidth, height: h - (padding * 2), x: w - weatherWidth - padding, y: padding };
+      const weather = { 
+        width: weatherWidth, 
+        height: h - (padding * 2), 
+        x: w - weatherWidth - padding, 
+        y: padding 
+      };
       
-      const footerBtnWidth = 80;
+      const footerBtnWidth = 100;
       const footerWidgetWidth = (centerWidth - footerBtnWidth - (padding * 2)) / 2;
 
-      if (isNightMode) {
-        setWidgets({
-          weather,
-          clock: { width: centerWidth, height: clockHeight, x: padding, y: padding },
-          date: { width: centerWidth, height: h - clockHeight - footerHeight - (padding * 3), x: padding, y: padding + clockHeight + padding },
-          prev: { width: footerWidgetWidth, height: footerHeight, x: padding, y: h - footerHeight - padding },
-          next: { width: footerWidgetWidth, height: footerHeight, x: padding + footerWidgetWidth + footerBtnWidth + (padding * 2), y: h - footerHeight - padding }
-        });
-      } else {
-        const remainingHeight = h - footerHeight - (padding * 3);
-        const widgetHeight = remainingHeight / 2;
-        setWidgets({
-          weather,
-          clock: { width: centerWidth, height: widgetHeight, x: padding, y: padding },
-          date: { width: centerWidth, height: widgetHeight, x: padding, y: padding + widgetHeight + padding },
-          prev: { width: footerWidgetWidth, height: footerHeight, x: padding, y: h - footerHeight - padding },
-          next: { width: footerWidgetWidth, height: footerHeight, x: padding + footerWidgetWidth + footerBtnWidth + (padding * 2), y: h - footerHeight - padding }
-        });
-      }
-    } else {
-      // Portrait layout
-      const widgetWidth = w - (padding * 2);
-      const clockHeight = isNightMode ? 240 : 160;
-      const weatherHeight = h * 0.2;
-      const dateHeight = h * 0.2;
-      const footerHeight = 100;
-      const availableSpace = h - clockHeight - weatherHeight - dateHeight - (padding * 5);
-      
-      const weather = { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding };
-      
-      setWidgets(prev => ({
-        ...prev,
+      setWidgets({
         weather,
+        clock: { width: centerWidth, height: clockHeight, x: padding, y: padding },
+        date: { width: centerWidth, height: centerContentHeight, x: padding, y: padding + clockHeight + padding },
+        prev: { width: footerWidgetWidth, height: footerHeight, x: padding, y: h - footerHeight - padding },
+        next: { width: footerWidgetWidth, height: footerHeight, x: padding + footerWidgetWidth + footerBtnWidth + (padding * 2), y: h - footerHeight - padding }
+      });
+    } else {
+      // Portrait remains similar but with safe padding
+      const widgetWidth = w - (padding * 2);
+      const clockHeight = isNightMode ? Math.floor(h * 0.3) : Math.floor(h * 0.2);
+      const weatherHeight = Math.floor(h * 0.3);
+      const dateHeight = Math.floor(h * 0.25);
+      const footerHeight = Math.floor(h * 0.1);
+      
+      setWidgets({
         clock: { width: widgetWidth, height: clockHeight, x: padding, y: padding },
+        weather: { width: widgetWidth, height: weatherHeight, x: padding, y: padding + clockHeight + padding },
         date: { width: widgetWidth, height: dateHeight, x: padding, y: padding + clockHeight + weatherHeight + (padding * 2) },
-        prev: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) },
-        next: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding + (widgetWidth / 2) + (padding / 2), y: padding + clockHeight + weatherHeight + dateHeight + (padding * 3) }
-      }));
+        prev: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding, y: h - footerHeight - padding },
+        next: { width: (widgetWidth / 2) - (padding / 2), height: footerHeight, x: padding + (widgetWidth / 2) + (padding / 2), y: h - footerHeight - padding }
+      });
     }
   }, [isNightMode]);
+
+  // Lógica da Rádio em background (sem UI como solicitado, mas funcional como pedido antes)
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      if (audioRef.current && audioRef.current.paused && isPlayingRadio) {
+        audioRef.current.play().catch(e => console.log("Audio block:", e));
+      }
+    };
+    window.addEventListener('click', handleInteraction, { once: false });
+    window.addEventListener('touchstart', handleInteraction, { once: false });
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [isPlayingRadio]);
+
+  useEffect(() => {
+    let playInterval: NodeJS.Timeout;
+    if (hasStarted && isPlayingRadio && audioRef.current) {
+      const attemptPlay = () => {
+        if (audioRef.current && audioRef.current.paused) {
+          audioRef.current.play().then(() => clearInterval(playInterval)).catch(() => {});
+        } else if (audioRef.current && !audioRef.current.paused) {
+          clearInterval(playInterval);
+        }
+      };
+      attemptPlay();
+      playInterval = setInterval(attemptPlay, 3000);
+    }
+    return () => { if (playInterval) clearInterval(playInterval); };
+  }, [hasStarted, isPlayingRadio]);
 
   useEffect(() => {
     window.addEventListener('resize', recalculateLayout);
@@ -1859,8 +1741,8 @@ const App = () => {
           </div>
         )}
 
-        {/* Removing RadioPlayer and QuickSettings as per "tire os outros dois" and "deixe só o botão de full screen" */}
-        <RadioPlayer isPlaying={hasStarted} volume={volume} />
+        {/* Removing RadioPlayer and QuickSettings as per user intent "deixe só o botão de full screen" */}
+        <audio ref={audioRef} autoPlay src="https://playerservices.streamtheworld.com/api/livestream-redirect/JBFMAAC.aac" />
         
         <AlarmOverlay 
           alarm={activeAlarm} 
@@ -1892,7 +1774,7 @@ const App = () => {
           </ResizableWidget>
           
           <ResizableWidget width={widgets.weather.width} height={widgets.weather.height} locked={isLayoutLocked} position={{ x: widgets.weather.x, y: widgets.weather.y }} isSelected={selectedWidget === 'weather'} onSelect={() => setSelectedWidget('weather')} onResize={(w, h) => updateWidget('weather', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('weather', { x, y })}>
-            <WeatherWidget weather={weather} locationName={locationName} onRefresh={loadData} />
+            <WeatherWidget weather={weather} locationName={locationName} onRefresh={loadData} width={widgets.weather.width} height={widgets.weather.height} />
           </ResizableWidget>
           
           <ResizableWidget width={widgets.date.width} height={widgets.date.height} locked={isLayoutLocked} position={{ x: widgets.date.x, y: widgets.date.y }} isSelected={selectedWidget === 'date'} onSelect={() => setSelectedWidget('date')} onResize={(w, h) => updateWidget('date', { width: w, height: h })} onPositionChange={(x, y) => updateWidget('date', { x, y })}>
